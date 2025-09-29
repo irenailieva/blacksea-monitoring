@@ -69,5 +69,5 @@ async def predict_explain(features: list[float] = Body(..., embed=True)):
     except httpx.HTTPError as e:
         raise HTTPException(status_code=502, detail=f"ML service error: {str(e)}")
 
-# Включваме AUTH рутера
+# INCLUDING AUTH ROUTER IN APP ROUTER SET
 app.include_router(auth_router.router, prefix="/auth", tags=["auth"])
