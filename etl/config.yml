@@ -1,0 +1,16 @@
+aoi:
+  name: "varna_bay"
+  # Примерен AOI (bbox около Варненския залив)
+  bbox: [27.85, 43.20, 27.95, 43.25] # [minLon, minLat, maxLon, maxLat]
+
+time:
+  since: "2024-01-01"
+  to: "2024-01-31"
+
+filters:
+  cloud_max: 40 # % максимална облачност
+
+output:
+  dir: "out"
+  manifest_csv: "manifest.csv"
+  tiles_geojson: "tiles.geojson"
