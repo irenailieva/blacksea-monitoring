@@ -17,4 +17,6 @@ class User(Base):
     email = Column(String(100), unique=True, nullable=False)
     password_hash = Column(String(256), nullable=False)
     role = Column(Enum(UserRole), nullable=False, server_default="viewer")
-    created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text("NOW()"))
+    created_at = Column(
+        TIMESTAMP(timezone=True), nullable=False, server_default=text("NOW()")
+    )
