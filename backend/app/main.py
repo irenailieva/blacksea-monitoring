@@ -4,10 +4,10 @@ from fastapi import FastAPI, Body, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
-from app.routers import auth as auth_router
-from app.routers import users as users_router
+from app.routes import auth as auth_router
+from app.routes import users as users_router
 
-from app.db import Base, engine
+from backend.app.core.database import Base, engine
 
 load_dotenv()
 
@@ -75,5 +75,5 @@ async def predict_explain(features: list[float] = Body(..., embed=True)):
 #########################################
 # INCLUDING AUTH ROUTER IN APP ROUTER SET
 #########################################
-app.include_router(auth_router.router, prefix="/auth", tags=["auth"])
-app.include_router(users_router.router, prefix="/users", tags=["users"])
+app.include_router(auth_router.router)
+app.include_router(users_router.router)

@@ -5,7 +5,7 @@ import os
 
 DB_USER = os.getenv("PG_USER", "postgres")
 DB_PASS = os.getenv("PG_PASSWORD", "1401")
-DB_NAME = os.getenv("PG_DB", "blacksea_monitoring")
+DB_NAME = os.getenv("PG_DB", "blacksea_monitor")
 DB_HOST = os.getenv("PG_HOST", "localhost")
 DB_PORT = os.getenv("PG_PORT", "5432")
 

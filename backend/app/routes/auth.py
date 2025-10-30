@@ -3,7 +3,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Response, Request, 
 from pydantic import BaseModel, Field
 from passlib.hash import pbkdf2_sha256
 
-from app.security import create_access_token, get_current_user, require_role
+from backend.app.core.security import create_access_token, get_current_user, require_role
 
 router = APIRouter()
 
