@@ -1,18 +1,22 @@
-from sqlalchemy import Column, Integer, String, Enum, ForeignKey
-from sqlalchemy.orm import relationship
-from .base import Base
+from sqlalchemy import String
 from sqlalchemy.dialects.postgresql import ENUM
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from .base import Base
 
-user_role = ENUM('viewer', 'analyst', 'admin', name='user_role', create_type=False)
+user_role = ENUM("viewer", "analyst", "admin", name="user_role", create_type=False)
+
 
 class User(Base):
     __tablename__ = "user"
 
-    id = Column(Integer, primary_key=True)
-    username = Column(String(50), unique=True, nullable=False)
-    email = Column(String(120), unique=True, nullable=False)
-    password_hash = Column(String(255), nullable=False)
-    role = Column(user_role, nullable=False, default='viewer')
+    id: Mapped[int] = mapped_column(primary_key=True)
+    username: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+    email: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    role: Mapped[str] = mapped_column(user_role, nullable=False, default="viewer")
 
-    teams = relationship("TeamMembership", back_populates="user")
-    notifications = relationship("Notification", back_populates="user")
+    teams: Mapped[list["TeamMembership"]] = relationship(back_populates="user")
+    notifications: Mapped[list["Notification"]] = relationship(back_populates="user")
+
+    def __repr__(self) -> str:
+        return f"<User(username={self.username}, role={self.role})>"

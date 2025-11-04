@@ -1,20 +1,34 @@
-from sqlalchemy import Column, Integer, Float, ForeignKey
-from sqlalchemy.orm import relationship
-from .base import Base
+from typing import Optional
+from sqlalchemy import Float, ForeignKey
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.models import Base, Scene, IndexType
 
 class IndexValue(Base):
-    __tablename__ = "index_value"
+    """Model representing calculated index values for specific scenes."""
+    __tablename__ = "index_values"  # Changed to plural for consistency
 
-    id = Column(Integer, primary_key=True)
-    scene_id = Column(Integer, ForeignKey("scene.id", ondelete="CASCADE"), nullable=False)
-    index_type_id = Column(Integer, ForeignKey("index_type.id", ondelete="CASCADE"), nullable=False)
-    mean_value = Column(Float)
-    min_value = Column(Float)
-    max_value = Column(Float)
+    # Foreign keys
+    scene_id: Mapped[int] = mapped_column(
+        ForeignKey("scenes.id", ondelete="CASCADE"), 
+        nullable=False
+    )
+    index_type_id: Mapped[int] = mapped_column(
+        ForeignKey("index_types.id", ondelete="CASCADE"), 
+        nullable=False
+    )
+
+    # Value columns
+    mean_value: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    min_value: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    max_value: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
 
     # Relationships
-    scene = relationship("Scene", back_populates="index_values")
-    index_type = relationship("IndexType", back_populates="values")
+    scene: Mapped["Scene"] = relationship(back_populates="index_value")
+    index_type: Mapped["IndexType"] = relationship(back_populates="values")
 
-    def __repr__(self):
-        return f"<IndexValue(index={self.index_type.name}, mean={self.mean_value:.3f})>"
+    def __repr__(self) -> str:
+        return (
+            f"<IndexValue(index={self.index_type.name if self.index_type else None}, "
+            f"mean={self.mean_value:.3f if self.mean_value is not None else 'N/A'})>"
+        )
