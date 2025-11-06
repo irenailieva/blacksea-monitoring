@@ -1,7 +1,9 @@
 from sqlalchemy import String, ForeignKey
 from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from .base import Base
+from .user import User
 
 team_role = ENUM("member", "moderator", "admin", name="team_role", create_type=False)
 

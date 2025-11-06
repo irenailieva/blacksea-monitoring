@@ -1,0 +1,7 @@
+{
+  "include": ["backend/app"],
+  "venvPath": "backend",
+  "venv": "venv",
+  "typeCheckingMode": "basic"
+}
+

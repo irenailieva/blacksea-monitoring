@@ -1,29 +1,38 @@
-from sqlalchemy import Column, Integer, String, Date, ForeignKey, Float
-from sqlalchemy.orm import relationship, declarative_base
-from sqlalchemy.ext.declarative import declared_attr
+from typing import TYPE_CHECKING
 
-Base = declarative_base()
-#TODO: finish models: scnene, team, user
+from sqlalchemy import String, Date, ForeignKey, Float
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from .base import Base
+
+if TYPE_CHECKING:
+    from .region import Region
+    from .index_value import IndexValue
+    from .scene_file import SceneFile
+    from .classification_result import ClassificationResult
+    from .shap_value import ShapValue
+
+
 class Scene(Base):
     __tablename__ = "scenes"
 
-    id = Column(Integer, primary_key=True, index=True)
-    scene_id = Column(String, unique=True, nullable=False)  # напр. S2A_MSIL2A_20240703T085601
-    acquisition_date = Column(Date, nullable=False)
-    satellite = Column(String, nullable=False, default="Sentinel-2")
-    cloud_cover = Column(Float, nullable=True)
-    tile = Column(String, nullable=True)
-    path = Column(String, nullable=True)  # локален път до сцената
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    scene_id: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    acquisition_date: Mapped[Date] = mapped_column(Date, nullable=False)
+    satellite: Mapped[str] = mapped_column(String(50), nullable=False, default="Sentinel-2")
+    cloud_cover: Mapped[float | None] = mapped_column(Float, nullable=True)
+    tile: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    path: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
-    # 🔗 Външни ключове
-    region_id = Column(Integer, ForeignKey("regions.id"), nullable=False)
-    index_type_id = Column(Integer, ForeignKey("index_types.id"), nullable=True)
-    index_value_id = Column(Integer, ForeignKey("index_values.id"), nullable=True)
+    # Foreign keys
+    region_id: Mapped[int] = mapped_column(ForeignKey("regions.id", ondelete="RESTRICT"), nullable=False)
 
-    # 🔁 Релации
-    region = relationship("Region", back_populates="scenes")
-    index_type = relationship("IndexType", back_populates="scenes")
-    index_value = relationship("IndexValue", back_populates="scenes")
+    # Relationships
+    region: Mapped["Region"] = relationship(back_populates="scenes")
+    index_values: Mapped[list["IndexValue"]] = relationship(back_populates="scene", cascade="all, delete-orphan")
+    files: Mapped[list["SceneFile"]] = relationship(back_populates="scene", cascade="all, delete-orphan")
+    classification_results: Mapped[list["ClassificationResult"]] = relationship(back_populates="scene", cascade="all, delete-orphan")
+    shap_values: Mapped[list["ShapValue"]] = relationship(back_populates="scene", cascade="all, delete-orphan")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Scene(id={self.id}, scene_id='{self.scene_id}', region_id={self.region_id})>"

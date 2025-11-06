@@ -5,6 +5,14 @@ from .index_value import IndexValue
 from .user import User
 from .team import Team, TeamMembership
 from .scene import Scene
+from .scene_file import SceneFile
+from .classification_result import ClassificationResult
+from .model_run import ModelRun
+from .shap_value import ShapValue
+from .etl_job import ETLJob
+from .error_log import ErrorLog
+from .notification import Notification
+from .webhook_integration import WebhookIntegration
 
 __all__ = [
     'Base',
@@ -14,5 +22,13 @@ __all__ = [
     'User',
     'Team',
     'TeamMembership',
-    'Scene'
+    'Scene',
+    'SceneFile',
+    'ClassificationResult',
+    'ModelRun',
+    'ShapValue',
+    'ETLJob',
+    'ErrorLog',
+    'Notification',
+    'WebhookIntegration'
 ]

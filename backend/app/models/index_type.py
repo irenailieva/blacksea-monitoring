@@ -2,8 +2,9 @@ from typing import List, Optional
 from sqlalchemy import String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models import Base, Scene, IndexValue
-
+from .base import Base
+from .index_value import IndexValue
+from .shap_value import ShapValue
 
 class IndexType(Base):
     """Model representing different types of indices that can be calculated."""
@@ -19,9 +20,7 @@ class IndexType(Base):
         back_populates="index_type",
         cascade="all, delete-orphan"
     )
-    scenes: Mapped[List["Scene"]] = relationship(
-        back_populates="index_type"
-    )
+    shap_values: Mapped[List["ShapValue"]] = relationship(back_populates="index_type", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
         return f"<IndexType(name='{self.name}')>"
