@@ -2,6 +2,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 import os
 
+from app.models.base import Base
+from app.models.user import user_role
+from app.models.team import team_role
+
 DB_USER = os.getenv("PG_USER", "postgres")
 DB_PASS = os.getenv("PG_PASSWORD", "1401")
 DB_NAME = os.getenv("PG_DB", "blacksea_monitor")
@@ -21,3 +25,7 @@ def get_db():
         yield db
     finally:
         db.close()
+
+# Ensure custom ENUM types exist before table creation
+user_role.create(bind=engine, checkfirst=True)
+team_role.create(bind=engine, checkfirst=True)

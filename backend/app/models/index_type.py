@@ -1,10 +1,12 @@
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 from sqlalchemy import String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base
-from .index_value import IndexValue
-from .shap_value import ShapValue
+
+if TYPE_CHECKING:
+    from .index_value import IndexValue
+    from .shap_value import ShapValue
 
 class IndexType(Base):
     """Model representing different types of indices that can be calculated."""

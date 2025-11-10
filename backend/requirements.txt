@@ -5,6 +5,7 @@ asyncpg
 sqlalchemy
 psycopg2-binary
 pydantic
+pydantic[email]
 python-multipart
 python-dotenv
 geoalchemy2

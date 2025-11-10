@@ -1,12 +1,14 @@
 from datetime import datetime
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from sqlalchemy import String, DateTime, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base
-from .shap_value import ShapValue
-from .classification_result import ClassificationResult
+
+if TYPE_CHECKING:
+    from .shap_value import ShapValue
+    from .classification_result import ClassificationResult
 
 
 class ModelRun(Base):

@@ -1,9 +1,13 @@
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import ForeignKey, String, Text, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base
+
+if TYPE_CHECKING:
+    from .etl_job import ETLJob
 
 
 class ErrorLog(Base):

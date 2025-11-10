@@ -8,7 +8,7 @@ from .base import Base
 
 if TYPE_CHECKING:
     from .team import TeamMembership
-from .notification import Notification
+    from .notification import Notification
 
 user_role = ENUM("viewer", "analyst", "admin", name="user_role", create_type=False)
 

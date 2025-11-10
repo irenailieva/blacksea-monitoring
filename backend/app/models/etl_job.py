@@ -1,10 +1,13 @@
 from datetime import datetime
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from sqlalchemy import String, DateTime, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base
+
+if TYPE_CHECKING:
+    from .error_log import ErrorLog
 
 
 class ETLJob(Base):
