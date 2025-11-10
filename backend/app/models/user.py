@@ -1,9 +1,13 @@
+from typing import TYPE_CHECKING
+
 from sqlalchemy import String
 from sqlalchemy.dialects.postgresql import ENUM
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base
-from .team import TeamMembership
+
+if TYPE_CHECKING:
+    from .team import TeamMembership
 from .notification import Notification
 
 user_role = ENUM("viewer", "analyst", "admin", name="user_role", create_type=False)
