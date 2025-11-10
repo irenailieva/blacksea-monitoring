@@ -6,8 +6,12 @@ from dotenv import load_dotenv
 
 from app.routes import auth as auth_router
 from app.routes import users as users_router
+from app.routes import regions as regions_router
+from app.routes import scenes as scenes_router
+from app.routes import index_types as index_types_router
+from app.routes import index_values as index_values_router
 
-from backend.app.core.database import Base, engine
+from app.core.database import Base, engine
 
 load_dotenv()
 
@@ -73,7 +77,11 @@ async def predict_explain(features: list[float] = Body(..., embed=True)):
         raise HTTPException(status_code=502, detail=f"ML service error: {str(e)}")
 
 #########################################
-# INCLUDING AUTH ROUTER IN APP ROUTER SET
+# INCLUDING ROUTERS IN APP
 #########################################
 app.include_router(auth_router.router)
 app.include_router(users_router.router)
+app.include_router(regions_router.router)
+app.include_router(scenes_router.router)
+app.include_router(index_types_router.router)
+app.include_router(index_values_router.router)
