@@ -2,10 +2,14 @@ from datetime import datetime
 from fastapi import APIRouter, Body, Depends, HTTPException, Response, Request, status
 from pydantic import BaseModel, Field
 from passlib.hash import pbkdf2_sha256
+from sqlalchemy.orm import Session
 
-from app.core.security import create_access_token, get_current_user, require_role
+from app.core.database import get_db
+from app.core.security import create_access_token, get_current_user, require_role, ACCESS_TOKEN_EXPIRE_MINUTES
+from app.crud import user as crud_user
+from app.models.user import User
 
-router = APIRouter()
+router = APIRouter(prefix="/auth", tags=["authentication"])
 
 # ---- Pydantic схеми ----
 class RegisterRequest(BaseModel):
@@ -14,9 +18,10 @@ class RegisterRequest(BaseModel):
     role: str = Field(default="viewer")  # viewer|analyst|admin
 
 class LoginRequest(BaseModel):
-    username: str
-    password: str
-    cookie: bool = False  # ако True – ще сетнем HttpOnly cookie
+    """Схема за login request."""
+    username: str = Field(..., min_length=1, max_length=50)
+    password: str = Field(..., min_length=1)
+    set_cookie: bool = Field(default=False, description="Ако True, сетва HttpOnly cookie")
 
 class UserPublic(BaseModel):
     id: int
@@ -24,9 +29,10 @@ class UserPublic(BaseModel):
     role: str
 
 class TokenResponse(BaseModel):
+    """Схема за token response."""
     access_token: str
     token_type: str = "bearer"
-    expires_in: int
+    expires_in: int  # в секунди
 
 # ---- Помощни функции (in-memory) ----
 def hash_password(password: str) -> str:
@@ -51,35 +57,94 @@ def register(req: RegisterRequest, request: Request):
     }
     return {"id": new_id, "username": req.username, "role": req.role}
 
-@router.post("/login", response_model=TokenResponse)
-def login(resp: Response, req: LoginRequest, request: Request):
-    users = request.app.state.users_store
-    u = users.get(req.username)
-    if not u or not verify_password(req.password, u["password_hash"]):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
-    claims = {"sub": u["username"], "role": u["role"]}
-    token = create_access_token(claims)
-    # по желание сетваме HttpOnly cookie
-    if req.cookie:
-        resp.set_cookie(
+@router.post("/login", response_model=TokenResponse, status_code=status.HTTP_200_OK)
+def login(
+    login_data: LoginRequest,
+    response: Response,
+    db: Session = Depends(get_db)
+):
+    """
+    Автентикира потребител и връща JWT access token.
+    
+    Приема username и password, проверява ги срещу базата данни,
+    и връща JWT token. Опционално може да сетне HttpOnly cookie.
+    
+    Args:
+        login_data: Login credentials (username, password, set_cookie)
+        response: FastAPI Response обект за сетване на cookies
+        db: Database session
+        
+    Returns:
+        TokenResponse с access_token и метаданни
+        
+    Raises:
+        HTTPException: 401 UNAUTHORIZED при невалидни credentials
+        
+    TODO:
+        - Добави rate limiting за защита срещу brute-force атаки (провер на брой опити от IP адрес, redis или in-memory cache за броене на опити)
+          (например: максимум 5 опита за 15 минути от един IP)
+        - Добави logging на неуспешни опити за login за мониторинг и сигурност
+        - Разгледай възможност за refresh token механизъм за по-добра UX
+          (дълготрайни refresh tokens + късоживеещи access tokens)
+    """
+
+    # Автентикация на потребителя
+    user = crud_user.authenticate(
+        db=db,
+        username=login_data.username,
+        password=login_data.password
+    )
+    
+    if not user:
+        # TODO: Logging - логвай неуспешен опит за login
+        # Пример: logger.warning(f"Failed login attempt for username: {login_data.username}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # Създаване на JWT token
+    token_data = {
+        "sub": user.username,
+        "role": user.role,
+        "id": user.id  # Опционално, за по-бърз достъп
+    }
+    access_token = create_access_token(data=token_data)
+    
+    # Сетване на cookie ако е поискано
+    if login_data.set_cookie:
+        expires_seconds = ACCESS_TOKEN_EXPIRE_MINUTES * 60
+        response.set_cookie(
             key="access_token",
-            value=token,
+            value=access_token,
             httponly=True,
-            secure=False,    # в продукция → True (HTTPS)
+            secure=True,  # В продукция трябва да е True (HTTPS)
             samesite="lax",
-            max_age=60*60,   # 1h
+            max_age=expires_seconds,
             path="/",
         )
-    return {"access_token": token, "expires_in": 60*60}
+    
+    # TODO: Token refresh - ако се добави refresh token механизъм,
+    # може да се върне и refresh_token в response-а
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60
+    }
 
 @router.get("/me", response_model=UserPublic)
-def me(user = Depends(get_current_user)):
-    return {"id": user["id"], "username": user["username"], "role": user["role"]}
+def me(user: User = Depends(get_current_user)):
+    """Връща информация за текущия автентикиран потребител."""
+    return {"id": user.id, "username": user.username, "role": user.role}
 
 @router.get("/secure-ping")
-def secure_ping(user = Depends(get_current_user)):
-    return {"ok": True, "user": user}
+def secure_ping(user: User = Depends(get_current_user)):
+    """Тестов endpoint за проверка на автентикация."""
+    return {"ok": True, "user": {"id": user.id, "username": user.username, "role": user.role}}
 
 @router.get("/admin-only")
-def admin_only(user = Depends(require_role("admin"))):
-    return {"ok": True, "admin": user["username"]}
+def admin_only(user: User = Depends(require_role("admin"))):
+    """Тестов endpoint само за администратори."""
+    return {"ok": True, "admin": user.username}
