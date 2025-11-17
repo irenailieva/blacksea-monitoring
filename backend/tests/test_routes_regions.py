@@ -7,7 +7,7 @@ from fastapi import status
 from app.schemas import RegionCreate
 
 
-def test_create_region_success(client, auth_headers_analyst):
+def test_create_region_success(client, auth_headers_researcher):
     """Тест за успешно създаване на регион чрез API."""
     region_data = {
         "name": "Test Region",
@@ -22,7 +22,7 @@ def test_create_region_success(client, auth_headers_analyst):
     response = client.post(
         "/regions/",
         json=region_data,
-        headers=auth_headers_analyst
+        headers=auth_headers_researcher
     )
     
     assert response.status_code == status.HTTP_201_CREATED
@@ -73,7 +73,7 @@ def test_get_regions_success(client, auth_headers_viewer):
     assert isinstance(response.json(), list)
 
 
-def test_get_region_by_id_success(client, auth_headers_analyst):
+def test_get_region_by_id_success(client, auth_headers_researcher):
     """Тест за получаване на регион по ID."""
     # Създаваме регион
     region_data = {
@@ -87,7 +87,7 @@ def test_get_region_by_id_success(client, auth_headers_analyst):
     create_response = client.post(
         "/regions/",
         json=region_data,
-        headers=auth_headers_analyst
+        headers=auth_headers_researcher
     )
     region_id = create_response.json()["id"]
     
@@ -107,7 +107,7 @@ def test_get_region_not_found(client, auth_headers_viewer):
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
-def test_update_region_success(client, auth_headers_analyst):
+def test_update_region_success(client, auth_headers_researcher):
     """Тест за успешно обновяване на регион."""
     # Създаваме регион
     region_data = {
@@ -121,7 +121,7 @@ def test_update_region_success(client, auth_headers_analyst):
     create_response = client.post(
         "/regions/",
         json=region_data,
-        headers=auth_headers_analyst
+        headers=auth_headers_researcher
     )
     region_id = create_response.json()["id"]
     
@@ -130,7 +130,7 @@ def test_update_region_success(client, auth_headers_analyst):
     response = client.put(
         f"/regions/{region_id}",
         json=update_data,
-        headers=auth_headers_analyst
+        headers=auth_headers_researcher
     )
     
     assert response.status_code == status.HTTP_200_OK

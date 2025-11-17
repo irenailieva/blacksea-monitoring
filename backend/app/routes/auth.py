@@ -5,7 +5,7 @@ from passlib.hash import pbkdf2_sha256
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.security import create_access_token, get_current_user, require_role, ACCESS_TOKEN_EXPIRE_MINUTES
+from app.core.security import create_access_token, get_current_user, require_role, admin_required, ACCESS_TOKEN_EXPIRE_MINUTES
 from app.crud import user as crud_user
 from app.models.user import User
 
@@ -15,7 +15,7 @@ router = APIRouter(prefix="/auth", tags=["authentication"])
 class RegisterRequest(BaseModel):
     username: str = Field(min_length=3, max_length=50)
     password: str = Field(min_length=6, max_length=128)
-    role: str = Field(default="viewer")  # viewer|analyst|admin
+    role: str = Field(default="viewer")  # admin|researcher|viewer
 
 class LoginRequest(BaseModel):
     """Схема за login request."""
@@ -145,6 +145,6 @@ def secure_ping(user: User = Depends(get_current_user)):
     return {"ok": True, "user": {"id": user.id, "username": user.username, "role": user.role}}
 
 @router.get("/admin-only")
-def admin_only(user: User = Depends(require_role("admin"))):
+def admin_only(user: User = Depends(admin_required)):
     """Тестов endpoint само за администратори."""
     return {"ok": True, "admin": user.username}

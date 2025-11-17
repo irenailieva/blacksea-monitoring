@@ -18,7 +18,7 @@ class BaseSchema(BaseModel):
 class UserBase(BaseSchema):
     username: str = Field(..., min_length=3, max_length=50)
     email: EmailStr
-    role: str = Field(default="viewer", pattern="^(viewer|analyst|admin)$")
+    role: str = Field(default="viewer", pattern="^(admin|researcher|viewer)$")
 
 
 class UserCreate(UserBase):
@@ -28,7 +28,7 @@ class UserCreate(UserBase):
 class UserUpdate(BaseSchema):
     username: Optional[str] = Field(None, min_length=3, max_length=50)
     email: Optional[EmailStr] = None
-    role: Optional[str] = Field(None, pattern="^(viewer|analyst|admin)$")
+    role: Optional[str] = Field(None, pattern="^(admin|researcher|viewer)$")
     password: Optional[str] = Field(None, min_length=6, max_length=128)
 
 

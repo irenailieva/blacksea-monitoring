@@ -18,9 +18,9 @@ router = APIRouter(prefix="/regions", tags=["regions"])
 def create_region(
     region_in: schemas.RegionCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_any_role("analyst", "admin"))
+    current_user: User = Depends(require_any_role("researcher", "admin"))
 ):
-    """Създава нов регион. Изисква analyst или admin роля."""
+    """Създава нов регион. Изисква researcher или admin роля."""
     return crud_region.create(db=db, obj_in=region_in)
 
 
@@ -56,9 +56,9 @@ def update_region(
     region_id: int,
     region_in: schemas.RegionUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_any_role("analyst", "admin"))
+    current_user: User = Depends(require_any_role("researcher", "admin"))
 ):
-    """Обновява регион. Изисква analyst или admin роля."""
+    """Обновява регион. Изисква researcher или admin роля."""
     db_region = crud_region.get(db=db, id=region_id)
     if not db_region:
         raise HTTPException(

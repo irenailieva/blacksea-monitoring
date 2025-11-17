@@ -83,18 +83,18 @@ def test_admin(db: Session) -> User:
 
 
 @pytest.fixture
-def test_analyst(db: Session) -> User:
-    """Създава тестов анализатор."""
-    analyst = User(
-        username="analyst",
-        email="analyst@example.com",
-        password_hash=pwd_context.hash("analystpass123"),
-        role="analyst"
+def test_researcher(db: Session) -> User:
+    """Създава тестов изследовател."""
+    researcher = User(
+        username="researcher",
+        email="researcher@example.com",
+        password_hash=pwd_context.hash("researcherpass123"),
+        role="researcher"
     )
-    db.add(analyst)
+    db.add(researcher)
     db.commit()
-    db.refresh(analyst)
-    return analyst
+    db.refresh(researcher)
+    return researcher
 
 
 @pytest.fixture
@@ -112,8 +112,8 @@ def auth_headers_admin(test_admin: User) -> dict:
 
 
 @pytest.fixture
-def auth_headers_analyst(test_analyst: User) -> dict:
-    """Връща auth headers за analyst."""
-    token = create_access_token({"sub": test_analyst.username, "role": test_analyst.role})
+def auth_headers_researcher(test_researcher: User) -> dict:
+    """Връща auth headers за researcher."""
+    token = create_access_token({"sub": test_researcher.username, "role": test_researcher.role})
     return {"Authorization": f"Bearer {token}"}
 

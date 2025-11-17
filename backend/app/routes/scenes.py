@@ -18,9 +18,9 @@ router = APIRouter(prefix="/scenes", tags=["scenes"])
 def create_scene(
     scene_in: schemas.SceneCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_any_role("analyst", "admin"))
+    current_user: User = Depends(require_any_role("researcher", "admin"))
 ):
-    """Създава нова сцена. Изисква analyst или admin роля."""
+    """Създава нова сцена. Изисква researcher или admin роля."""
     return crud_scene.create(db=db, obj_in=scene_in)
 
 
@@ -59,9 +59,9 @@ def update_scene(
     scene_id: int,
     scene_in: schemas.SceneUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_any_role("analyst", "admin"))
+    current_user: User = Depends(require_any_role("researcher", "admin"))
 ):
-    """Обновява сцена. Изисква analyst или admin роля."""
+    """Обновява сцена. Изисква researcher или admin роля."""
     db_scene = crud_scene.get(db=db, id=scene_id)
     if not db_scene:
         raise HTTPException(

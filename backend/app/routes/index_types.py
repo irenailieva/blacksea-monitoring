@@ -18,9 +18,9 @@ router = APIRouter(prefix="/index-types", tags=["index-types"])
 def create_index_type(
     index_type_in: schemas.IndexTypeCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_any_role("analyst", "admin"))
+    current_user: User = Depends(require_any_role("researcher", "admin"))
 ):
-    """Създава нов тип индекс. Изисква analyst или admin роля."""
+    """Създава нов тип индекс. Изисква researcher или admin роля."""
     return crud_index_type.create(db=db, obj_in=index_type_in)
 
 
@@ -56,9 +56,9 @@ def update_index_type(
     index_type_id: int,
     index_type_in: schemas.IndexTypeUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_any_role("analyst", "admin"))
+    current_user: User = Depends(require_any_role("researcher", "admin"))
 ):
-    """Обновява тип индекс. Изисква analyst или admin роля."""
+    """Обновява тип индекс. Изисква researcher или admin роля."""
     db_index_type = crud_index_type.get(db=db, id=index_type_id)
     if not db_index_type:
         raise HTTPException(

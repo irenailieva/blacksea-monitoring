@@ -77,7 +77,7 @@ def create_access_token(
         ValueError: Ако data не съдържа "sub"
         
     Example:
-        >>> claims = {"sub": "john_doe", "role": "analyst"}
+        >>> claims = {"sub": "john_doe", "role": "researcher"}
         >>> token = create_access_token(claims)
         >>> # С персонализирана продължителност
         >>> token = create_access_token(claims, expires_minutes=60)
@@ -218,8 +218,8 @@ def require_any_role(*roles: str) -> Callable:
     Factory функция за dependency, която изисква една от посочените роли.
     
     Пример:
-        @router.get("/analyst-or-admin")
-        def endpoint(user: User = Depends(require_any_role("analyst", "admin"))):
+        @router.get("/researcher-or-admin")
+        def endpoint(user: User = Depends(require_any_role("researcher", "admin"))):
             ...
     """
     def dep(user: User = Depends(get_current_user)) -> User:
@@ -230,3 +230,37 @@ def require_any_role(*roles: str) -> Callable:
             )
         return user
     return dep
+
+
+def admin_required(user: User = Depends(get_current_user)) -> User:
+    """
+    Dependency за изискване на admin роля.
+    
+    Пример:
+        @router.get("/admin-only")
+        def admin_endpoint(user: User = Depends(admin_required)):
+            ...
+    """
+    if user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: requires admin role"
+        )
+    return user
+
+
+def researcher_required(user: User = Depends(get_current_user)) -> User:
+    """
+    Dependency за изискване на researcher роля.
+    
+    Пример:
+        @router.get("/researcher-only")
+        def researcher_endpoint(user: User = Depends(researcher_required)):
+            ...
+    """
+    if user.role != "researcher":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: requires researcher role"
+        )
+    return user

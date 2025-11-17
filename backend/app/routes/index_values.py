@@ -18,9 +18,9 @@ router = APIRouter(prefix="/index-values", tags=["index-values"])
 def create_index_value(
     index_value_in: schemas.IndexValueCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_any_role("analyst", "admin"))
+    current_user: User = Depends(require_any_role("researcher", "admin"))
 ):
-    """Създава нова индексна стойност. Изисква analyst или admin роля."""
+    """Създава нова индексна стойност. Изисква researcher или admin роля."""
     return crud_index_value.create(db=db, obj_in=index_value_in)
 
 
@@ -59,9 +59,9 @@ def update_index_value(
     index_value_id: int,
     index_value_in: schemas.IndexValueUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_any_role("analyst", "admin"))
+    current_user: User = Depends(require_any_role("researcher", "admin"))
 ):
-    """Обновява индексна стойност. Изисква analyst или admin роля."""
+    """Обновява индексна стойност. Изисква researcher или admin роля."""
     db_index_value = crud_index_value.get(db=db, id=index_value_id)
     if not db_index_value:
         raise HTTPException(
