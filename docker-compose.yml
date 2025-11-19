@@ -1,0 +1,11 @@
+services:
+  etl:
+    build:
+      context: ./etl
+      dockerfile: Dockerfile
+    container_name: etl
+    volumes:
+      - ./etl:/app
+    env_file:
+      - .env
+    command: python3 -u flows/pipeline.py

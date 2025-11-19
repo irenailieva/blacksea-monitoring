@@ -1,7 +1,12 @@
+setuptools<81
+wheel
+pip>=23.0
+
 python-dotenv==1.0.1
 PyYAML==6.0.2
 requests==2.32.3
 loguru==0.7.2
+tqdm==4.66.4
 
 rasterio==1.3.9
 rioxarray==0.15.4
@@ -12,11 +17,10 @@ polars==1.13.1
 
 shapely==2.0.4
 pyproj==3.7.1
+fiona==1.9.4
 
 sqlalchemy==2.0.36
 geoalchemy2==0.14.3
-psycopg2==2.9.9
+psycopg2-binary==2.9.9
 
 prefect==3.1.10
-
-tqdm==4.66.4
