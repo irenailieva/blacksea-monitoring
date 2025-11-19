@@ -1,4 +1,21 @@
 services:
+  db:
+    image: postgis/postgis:15-3.3
+    container_name: db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=1401
+      - POSTGRES_DB=blacksea_monitor
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   etl:
     build:
       context: ./etl
@@ -6,6 +23,16 @@ services:
     container_name: etl
     volumes:
       - ./etl:/app
+      - ./backend:/app/backend
     env_file:
-      - .env
+      - ./etl/.env
+    environment:
+      - DATABASE_URL=postgresql://postgres:1401@db:5432/blacksea_monitor
+      - PYTHONPATH=/app
+    depends_on:
+      db:
+        condition: service_healthy
     command: python3 -u flows/pipeline.py
+
+volumes:
+  postgres_data:
