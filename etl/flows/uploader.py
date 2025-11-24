@@ -5,6 +5,7 @@ from sqlalchemy.orm import sessionmaker
 from loguru import logger
 import rasterio
 from shapely.geometry import box
+from geoalchemy2 import WKTElement
 
 # Import models from the backend
 # Ensure 'backend' is in PYTHONPATH or mounted at /app/backend
@@ -24,9 +25,12 @@ def upload_to_db(file_path: str, db_url: str, aoi_config: dict):
     """
     logger.info(f"Uploading metadata for {file_path} to DB...")
     
+    # Create the database engine which manages the connection pool
     engine = create_engine(db_url)
     
+    # Create a configured "Session" class
     Session = sessionmaker(bind=engine)
+    # Create a Session instance to interact with the database
     session = Session()
     
     try:
@@ -41,9 +45,11 @@ def upload_to_db(file_path: str, db_url: str, aoi_config: dict):
             region = session.query(Region).filter_by(name=region_name).first()
             if not region:
                 logger.info(f"Creating new region: {region_name}")
+                # Use WKTElement for PostGIS geometry
+                geometry_element = WKTElement(wkt_geom, srid=4326)
                 region = Region(
                     name=region_name,
-                    geometry=wkt_geom, # Using the first file's bounds as region geom for now
+                    geometry=geometry_element, # Using the first file's bounds as region geom for now
                     area_km2=0.0 # Placeholder
                 )
                 session.add(region)

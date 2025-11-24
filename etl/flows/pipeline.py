@@ -1,17 +1,31 @@
 import os
+import sys
 import yaml
 from dotenv import load_dotenv
 from loguru import logger
-from downloader import download_data
-from index_generator import generate_index
-from preprocessor import preprocess_raster
-from uploader import upload_to_db
+from flows.downloader import download_data
+from flows.index_generator import generate_index
+from flows.preprocessor import preprocess_raster
+from flows.uploader import upload_to_db
 
 # Load env vars
-load_dotenv()
+env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
+load_dotenv(env_path)
+
+# Add project root to sys.path to allow importing backend
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
+
+from sqlalchemy import create_engine
+from backend.app.models import Base
+
 
 def load_config():
-    with open("config.yml", "r") as f:
+    # Try to find config.yml in parent directory (when running from flows/)
+    config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config.yml")
+    if not os.path.exists(config_path):
+        # Fallback to current directory
+        config_path = "config.yml"
+    with open(config_path, "r") as f:
         return yaml.safe_load(f)
 
 def run_pipeline():
@@ -27,6 +41,18 @@ def run_pipeline():
     if not db_url:
         logger.error("DATABASE_URL is not set!")
         return
+
+    # Ensure tables exist
+    logger.info("Ensuring database tables exist...")
+    engine = create_engine(db_url)
+    
+    # Create ENUM types first
+    from backend.app.models.user import user_role
+    from backend.app.models.team import team_role
+    user_role.create(bind=engine, checkfirst=True)
+    team_role.create(bind=engine, checkfirst=True)
+    
+    Base.metadata.create_all(engine)
 
     try:
         # 1. Download
