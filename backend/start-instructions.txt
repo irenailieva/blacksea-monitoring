@@ -1,0 +1,9 @@
+cd backend
+
+# Ако имаш виртуална среда
+source venv/Scripts/activate  # Windows PowerShell
+# или
+venv\Scripts\activate  # Windows CMD
+
+# Стартирай FastAPI
+uvicorn app.main:app --reload

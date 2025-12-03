@@ -3,6 +3,9 @@ import numpy as np
 import rasterio
 from rasterio.transform import from_origin
 from loguru import logger
+import pystac_client
+import odc.stac
+import rioxarray
 
 def download_data(aoi: dict, time_range: dict, output_dir: str, mode: str = "mock") -> str:
     """
@@ -59,7 +62,61 @@ def download_data(aoi: dict, time_range: dict, output_dir: str, mode: str = "moc
         logger.success(f"Mock data generated at {filepath}")
         return filepath
         
-    else:
-        # Placeholder for real API download (e.g., Copernicus Open Access Hub)
-        logger.warning("Real download not implemented yet. Using mock data fallback.")
-        return download_data(aoi, time_range, output_dir, mode="mock")
+    elif mode == "real":
+        logger.info("Searching for Sentinel-2 data via STAC...")
+        
+        STAC_URL = "https://earth-search.aws.element84.com/v1"
+        
+        bbox = aoi.get("bbox")
+        if not bbox:
+            raise ValueError("AOI must contain a 'bbox' [min_lon, min_lat, max_lon, max_lat]")
+            
+        start_date = time_range.get("start_date")
+        end_date = time_range.get("end_date")
+        datetime_query = f"{start_date}/{end_date}"
+        
+        try:
+            client = pystac_client.Client.open(STAC_URL)
+            
+            search = client.search(
+                collections=["sentinel-2-l2a"],
+                bbox=bbox,
+                datetime=datetime_query,
+                max_items=1,
+                query={"eo:cloud_cover": {"lt": 20}}
+            )
+            
+            items = list(search.item_collection())
+            
+            if not items:
+                logger.warning("No Sentinel-2 scenes found. Falling back to mock data.")
+                return download_data(aoi, time_range, output_dir, mode="mock")
+                
+            logger.info(f"Found {len(items)} scenes. Downloading the first one...")
+            
+            # Load data (Blue, Green, Red, NIR)
+            ds = odc.stac.load(
+                items,
+                bands=["blue", "green", "red", "nir"],
+                bbox=bbox,
+                crs="EPSG:4326",
+                resolution=0.0001
+            )
+            
+            if "time" in ds.dims:
+                ds = ds.isel(time=0)
+                
+            filename = f"sentinel2_{items[0].id}.tif"
+            filepath = os.path.join(output_dir, filename)
+            
+            # Convert to DataArray and save
+            da = ds.to_array(dim="band")
+            da.rio.to_raster(filepath)
+            
+            logger.success(f"Downloaded real data to {filepath}")
+            return filepath
+            
+        except Exception as e:
+            logger.error(f"Failed to download real data: {e}")
+            logger.info("Falling back to mock data.")
+            return download_data(aoi, time_range, output_dir, mode="mock")
