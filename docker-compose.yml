@@ -11,7 +11,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -33,6 +33,32 @@ services:
       db:
         condition: service_healthy
     command: python3 -u flows/pipeline.py
+
+  backend:
+    build:
+      context: ./backend
+    container_name: backend
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      ml:
+        condition: service_started
+    environment:
+      - DATABASE_URL=postgresql://postgres:1401@db:5432/blacksea_monitor
+      - ML_BASE_URL=http://ml:8500
+    volumes:
+      - ./backend:/app
+
+  ml:
+    build:
+      context: ./ml
+    container_name: ml
+    ports:
+      - "8500:8500"
+    volumes:
+      - ./ml:/app
 
 volumes:
   postgres_data:
