@@ -13,7 +13,7 @@ from schemas import (
 
 load_dotenv()
 
-MODEL_PATH = Path(os.getenv("ML_MODEL_PATH", "artifacts/model.json"))
+MODEL_PATH = Path(os.getenv("ML_MODEL_PATH", "artifacts/model.pkl"))
 MODEL_NAME = os.getenv("MODEL_NAME", "LinearMock")
 MODEL_VERSION = os.getenv("MODEL_VERSION", "0.1.0")
 

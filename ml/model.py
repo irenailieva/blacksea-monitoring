@@ -1,37 +1,49 @@
-import json
+import joblib
 import numpy as np
 from pathlib import Path
 
-class LinearModel:
-    def __init__(self, weights, bias):
-        self.w = np.array(weights, dtype=float)
-        self.b = float(bias)
+class EnsembleModel:
+    def __init__(self, model):
+        self.model = model
 
     @property
     def n_features(self):
-        return self.w.shape[0]
+        # Try to infer number of features
+        if hasattr(self.model, "n_features_in_"):
+            return self.model.n_features_in_
+        if hasattr(self.model, "n_features"): # XGBoost
+            return self.model.n_features
+        return -1 # Unknown
 
     def predict_one(self, x):
-        x = np.array(x, dtype=float)
-        if x.shape[0] != self.w.shape[0]:
-            raise ValueError(f"Expected {self.w.shape[0]} features, got {x.shape[0]}")
-        return float(self.w.dot(x) + self.b)
+        x = np.array(x, dtype=float).reshape(1, -1)
+        return float(self.model.predict(x)[0])
 
     def predict_batch(self, X):
         X = np.array(X, dtype=float)
-        if X.shape[1] != self.w.shape[0]:
-            raise ValueError(f"Expected {self.w.shape[0]} features, got {X.shape[1]}")
-        return list((X @ self.w) + self.b)
+        return list(self.model.predict(X))
 
     def explain_one(self, x):
+        # Simple feature importance based explanation if available
         x = np.array(x, dtype=float)
-        if x.shape[0] != self.w.shape[0]:
-            raise ValueError(f"Expected {self.w.shape[0]} features, got {x.shape[0]}")
-        # Проста линейна „обяснимост“: принос = w_i * x_i
-        contrib = self.w * x
-        yhat = float(contrib.sum() + self.b)
-        return list(map(float, contrib)), float(self.b), yhat
+        
+        if hasattr(self.model, "feature_importances_"):
+            importances = self.model.feature_importances_
+            # Simple contribution approximation: importance * value
+            # Note: This is NOT SHAP, but a lightweight proxy for now.
+            contrib = importances * x
+            bias = 0.0 # Tree models don't have a single bias term like linear models
+            yhat = self.predict_one(x)
+            return list(map(float, contrib)), float(bias), float(yhat)
+        
+        # Fallback if no feature importance
+        yhat = self.predict_one(x)
+        return [0.0] * len(x), 0.0, yhat
 
-def load_model(path: Path) -> LinearModel:
-    data = json.loads(path.read_text(encoding="utf-8"))
-    return LinearModel(weights=data["weights"], bias=data["bias"])
+def load_model(path: Path) -> EnsembleModel:
+    if not path.exists():
+        raise FileNotFoundError(f"Model file not found: {path}")
+    
+    # Load using joblib (standard for sklearn/xgboost/lightgbm)
+    model = joblib.load(path)
+    return EnsembleModel(model)
