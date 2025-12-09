@@ -10,36 +10,56 @@ import xgboost as xgb
 import lightgbm as lgb
 
 # Configuration
-ARTIFACTS_DIR = Path("artifacts")
+ARTIFACTS_DIR = Path("ml/artifacts")
 MODEL_PATH = ARTIFACTS_DIR / "model.pkl"
 RANDOM_SEED = 42
 
-def generate_mock_data(n_samples=1000):
+def load_data(path: Path):
     """
-    Generates mock satellite data for training.
-    Features: Band 1, Band 2, Band 3 (e.g., RGB/NIR)
-    Target: Chlorophyll-a concentration
+    Loads satellite data for training from a CSV file.
+    Expected columns: band1, band2, band3, band4, band5, target
     """
-    np.random.seed(RANDOM_SEED)
-    X = np.random.rand(n_samples, 5)  # 5 spectral bands
-    # Synthetic relationship: Target = 2*B1 + 0.5*B2^2 + 3*B3*B4 + noise
-    y = (
-        2 * X[:, 0] 
-        + 0.5 * (X[:, 1] ** 2) 
-        + 3 * X[:, 2] * X[:, 3] 
-        + np.random.normal(0, 0.1, n_samples)
-    )
+    if not path.exists():
+        raise FileNotFoundError(f"Data file not found: {path}")
+    
+    df = pd.read_csv(path)
+    
+    # Assuming last column is target, or specific column name 'target'
+    if 'target' in df.columns:
+        y = df['target'].values
+        X = df.drop(columns=['target']).values
+    else:
+        # Fallback: last column is target
+        y = df.iloc[:, -1].values
+        X = df.iloc[:, :-1].values
+        
     return X, y
 
+DATA_PATH = Path("ml/data/train.csv")
+
 def train():
-    print("Generating mock data...")
-    X, y = generate_mock_data()
+    print(f"Loading data from {DATA_PATH}...")
+    try:
+        X, y = load_data(DATA_PATH)
+    except FileNotFoundError:
+        print(f"Error: Data file not found at {DATA_PATH}. Please ensure 'data/train.csv' exists.")
+        return
+    print(f"Training on {len(X)} samples...")
+    
+    # Limit training data for dev/testing if it's too large
+    MAX_SAMPLES = 10000
+    if len(X) > MAX_SAMPLES:
+        print(f"Dataset too large. Sampling {MAX_SAMPLES} random rows for faster training.")
+        indices = np.random.choice(len(X), MAX_SAMPLES, replace=False)
+        X = X[indices]
+        y = y[indices]
+
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=RANDOM_SEED)
 
     models = {
-        "RandomForest": RandomForestRegressor(n_estimators=100, random_state=RANDOM_SEED),
-        "XGBoost": xgb.XGBRegressor(objective="reg:squarederror", random_state=RANDOM_SEED),
-        "LightGBM": lgb.LGBMRegressor(random_state=RANDOM_SEED, verbose=-1)
+        "RandomForest": RandomForestRegressor(n_estimators=50, n_jobs=-1, random_state=RANDOM_SEED),
+        "XGBoost": xgb.XGBRegressor(objective="reg:squarederror", n_jobs=-1, random_state=RANDOM_SEED),
+        "LightGBM": lgb.LGBMRegressor(n_jobs=-1, random_state=RANDOM_SEED, verbose=-1)
     }
 
     best_model = None
