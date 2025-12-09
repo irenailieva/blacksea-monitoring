@@ -10,7 +10,7 @@ import xgboost as xgb
 import lightgbm as lgb
 
 # Configuration
-ARTIFACTS_DIR = Path("ml/artifacts")
+ARTIFACTS_DIR = Path(__file__).parent / "artifacts"
 MODEL_PATH = ARTIFACTS_DIR / "model.pkl"
 RANDOM_SEED = 42
 
@@ -24,18 +24,34 @@ def load_data(path: Path):
     
     df = pd.read_csv(path)
     
-    # Assuming last column is target, or specific column name 'target'
-    if 'target' in df.columns:
-        y = df['target'].values
-        X = df.drop(columns=['target']).values
+    # Expected feature columns for Sentinel-2
+    feature_cols = ['blue', 'green', 'red', 'nir']
+    
+    # Check if we have these columns
+    if all(col in df.columns for col in feature_cols):
+        X = df[feature_cols].values
+        
+        if 'target' in df.columns:
+            y = df['target'].values
+        else:
+            # Fallback if target is missing for some reason
+            print("Warning: 'target' column missing. Using zeros.")
+            y = np.zeros(len(df))
     else:
-        # Fallback: last column is target
-        y = df.iloc[:, -1].values
-        X = df.iloc[:, :-1].values
+        # Fallback to old behavior for compatibility or other datasets
+        print("Warning: Standard Sentinel-2 columns not found. Falling back to generic loading.")
+        if 'target' in df.columns:
+            y = df['target'].values
+            X = df.drop(columns=['target']).values
+        else:
+            y = df.iloc[:, -1].values
+            X = df.iloc[:, :-1].values
         
     return X, y
 
-DATA_PATH = Path("ml/data/train.csv")
+
+DATA_PATH = Path(__file__).parent / "data" / "train.csv"
+
 
 def train():
     print(f"Loading data from {DATA_PATH}...")

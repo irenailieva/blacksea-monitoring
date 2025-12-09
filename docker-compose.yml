@@ -24,6 +24,7 @@ services:
     volumes:
       - ./etl:/app
       - ./backend:/app/backend
+      - ./ml:/app/ml
     env_file:
       - ./etl/.env
     environment:
