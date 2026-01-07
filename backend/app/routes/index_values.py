@@ -29,13 +29,20 @@ def read_index_values(
     skip: int = 0,
     limit: int = 100,
     scene_id: int = None,
+    index_type_id: int = None,
+    region_id: int = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Връща списък от индексни стойности. Изисква автентикация."""
-    if scene_id:
-        return crud_index_value.get_by_scene(db=db, scene_id=scene_id, skip=skip, limit=limit)
-    return crud_index_value.get_multi(db=db, skip=skip, limit=limit)
+    """Връща списък от индексни стойности с опционално филтриране."""
+    return crud_index_value.get_filtered(
+        db=db, 
+        scene_id=scene_id,
+        index_type_id=index_type_id,
+        region_id=region_id,
+        skip=skip, 
+        limit=limit
+    )
 
 
 @router.get("/{index_value_id}", response_model=schemas.IndexValueRead)

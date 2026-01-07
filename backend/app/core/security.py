@@ -7,7 +7,7 @@ from typing import Optional, Callable
 
 from fastapi import Depends, HTTPException, Request, status
 from jose import jwt, JWTError
-from passlib.context import CryptContext
+import bcrypt
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -17,39 +17,22 @@ JWT_SECRET = os.getenv("JWT_SECRET", "dev-secret-change-me")
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "120"))
 
-# Контекст за хеширане на пароли с bcrypt
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# pwd_context removed as passlib is incompatible with modern bcrypt
+# pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def hash_password(password: str) -> str:
     """
     Хешира потребителска парола с bcrypt.
-    
-    Args:
-        password: Паролата в plaintext
-        
-    Returns:
-        Хеширана парола като string (включва salt и rounds)
-        
-    Example:
-        >>> hash_password("mySecurePassword123")
-        '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5GyY5Y5Y5Y5Y5Y'
     """
-    return pwd_context.hash(password)
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
 
 def verify_password(password: str, hashed: str) -> bool:
     """
     Проверява дали дадена парола съвпада с хешираната версия.
-    
-    Args:
-        password: Паролата в plaintext за проверка
-        hashed: Хешираната парола от базата данни
-        
-    Returns:
-        True ако паролите съвпадат, False иначе
     """
-    return pwd_context.verify(password, hashed)
+    return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
 
 
 class TokenError(Exception):

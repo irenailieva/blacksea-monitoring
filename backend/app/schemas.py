@@ -44,6 +44,7 @@ class RegionBase(BaseSchema):
     name: str = Field(..., min_length=1, max_length=100)
     description: Optional[str] = Field(None, max_length=255)
     area_km2: Optional[float] = Field(None, gt=0)
+    type: Optional[str] = Field(default="aoi", pattern="^(aoi|exclusion)$")
 
 
 class RegionCreate(RegionBase):
@@ -371,9 +372,9 @@ class TeamMembershipUpdate(BaseSchema):
 
 
 class TeamMembershipRead(TeamMembershipBase):
-    id: int
     user_id: int
     team_id: int
+    user: Optional["UserRead"] = None
     created_at: datetime
     updated_at: datetime
 

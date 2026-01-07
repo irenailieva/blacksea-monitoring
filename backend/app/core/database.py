@@ -12,7 +12,9 @@ DB_NAME = os.getenv("PG_DB", "blacksea_monitor")
 DB_HOST = os.getenv("PG_HOST", "localhost")
 DB_PORT = os.getenv("PG_PORT", "5432")
 
-DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 engine = create_engine(DATABASE_URL, echo=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

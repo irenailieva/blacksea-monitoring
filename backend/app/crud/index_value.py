@@ -83,6 +83,28 @@ class CRUDIndexValue(CRUDBase[IndexValue]):
             .first()
         )
     
+    def get_filtered(
+        self,
+        db: Session,
+        *,
+        scene_id: Optional[int] = None,
+        index_type_id: Optional[int] = None,
+        region_id: Optional[int] = None,
+        skip: int = 0,
+        limit: int = 100
+    ) -> List[IndexValue]:
+        """Връща индексни стойности с филтриране."""
+        query = db.query(IndexValue)
+        
+        if scene_id:
+            query = query.filter(IndexValue.scene_id == scene_id)
+        if index_type_id:
+            query = query.filter(IndexValue.index_type_id == index_type_id)
+        if region_id:
+            query = query.filter(IndexValue.region_id == region_id)
+            
+        return query.offset(skip).limit(limit).all()
+        
     def get_by_scene(
         self,
         db: Session,
@@ -91,14 +113,8 @@ class CRUDIndexValue(CRUDBase[IndexValue]):
         skip: int = 0,
         limit: int = 100
     ) -> List[IndexValue]:
-        """Връща индексни стойности по сцена."""
-        return (
-            db.query(IndexValue)
-            .filter(IndexValue.scene_id == scene_id)
-            .offset(skip)
-            .limit(limit)
-            .all()
-        )
+        """Връща индексни стойности по сцена (Legacy wrapper)."""
+        return self.get_filtered(db, scene_id=scene_id, skip=skip, limit=limit)
     
     def update(
         self,

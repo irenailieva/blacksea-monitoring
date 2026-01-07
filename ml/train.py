@@ -3,104 +3,90 @@ import joblib
 import numpy as np
 import pandas as pd
 from pathlib import Path
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import accuracy_score, classification_report
 import xgboost as xgb
 import lightgbm as lgb
+import warnings
 
 # Configuration
 ARTIFACTS_DIR = Path(__file__).parent / "artifacts"
-MODEL_PATH = ARTIFACTS_DIR / "model.pkl"
+DATA_PATH = Path(__file__).parent / "dataset.csv"
 RANDOM_SEED = 42
 
-def load_data(path: Path):
-    """
-    Loads satellite data for training from a CSV file.
-    Expected columns: band1, band2, band3, band4, band5, target
-    """
-    if not path.exists():
-        raise FileNotFoundError(f"Data file not found: {path}")
-    
-    df = pd.read_csv(path)
-    
-    # Expected feature columns for Sentinel-2
-    feature_cols = ['blue', 'green', 'red', 'nir']
-    
-    # Check if we have these columns
-    if all(col in df.columns for col in feature_cols):
-        X = df[feature_cols].values
-        
-        if 'target' in df.columns:
-            y = df['target'].values
-        else:
-            # Fallback if target is missing for some reason
-            print("Warning: 'target' column missing. Using zeros.")
-            y = np.zeros(len(df))
-    else:
-        # Fallback to old behavior for compatibility or other datasets
-        print("Warning: Standard Sentinel-2 columns not found. Falling back to generic loading.")
-        if 'target' in df.columns:
-            y = df['target'].values
-            X = df.drop(columns=['target']).values
-        else:
-            y = df.iloc[:, -1].values
-            X = df.iloc[:, :-1].values
-        
-    return X, y
+# Ensure artifacts directory exists
+ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
 
-
-DATA_PATH = Path(__file__).parent / "data" / "train.csv"
-
+def cleanup_labels(val):
+    """Maps class IDs to 0, 1, 2."""
+    if val == 0: return 0 # Sand / Shallow Water
+    if val == 1: return 1 # Rocks / Algae
+    if val == 2: return 2 # Deep Sea
+    return 2 # Fallback
 
 def train():
     print(f"Loading data from {DATA_PATH}...")
-    try:
-        X, y = load_data(DATA_PATH)
-    except FileNotFoundError:
-        print(f"Error: Data file not found at {DATA_PATH}. Please ensure 'data/train.csv' exists.")
+    if not DATA_PATH.exists():
+        print(f"Error: Data file not found at {DATA_PATH}.")
         return
-    print(f"Training on {len(X)} samples...")
+
+    df = pd.read_csv(DATA_PATH)
     
-    # Limit training data for dev/testing if it's too large
-    MAX_SAMPLES = 10000
-    if len(X) > MAX_SAMPLES:
-        print(f"Dataset too large. Sampling {MAX_SAMPLES} random rows for faster training.")
-        indices = np.random.choice(len(X), MAX_SAMPLES, replace=False)
-        X = X[indices]
-        y = y[indices]
+    # Preprocess labels
+    if 'class_id' not in df.columns:
+        print("Error: 'class_id' column missing in dataset.")
+        return
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=RANDOM_SEED)
+    y = df['class_id'].apply(cleanup_labels).values.astype(int)
+    
+    # Select features
+    feature_cols = ['band_1', 'band_2', 'band_3', 'band_4']
+    if not all(col in df.columns for col in feature_cols):
+        print(f"Error: Missing feature columns. Expected: {feature_cols}")
+        return
+        
+    X = df[feature_cols].values
 
-    models = {
-        "RandomForest": RandomForestRegressor(n_estimators=50, n_jobs=-1, random_state=RANDOM_SEED),
-        "XGBoost": xgb.XGBRegressor(objective="reg:squarederror", n_jobs=-1, random_state=RANDOM_SEED),
-        "LightGBM": lgb.LGBMRegressor(n_jobs=-1, random_state=RANDOM_SEED, verbose=-1)
-    }
+    print(f"Training on {len(X)} samples with {len(feature_cols)} features...")
+    
+    # Split data
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=RANDOM_SEED, stratify=y)
 
-    best_model = None
-    best_mse = float("inf")
-    best_name = ""
+    # 1. Random Forest
+    print("Training Random Forest...")
+    rf = RandomForestClassifier(n_estimators=50, max_depth=10, n_jobs=-1, class_weight='balanced', random_state=RANDOM_SEED)
+    rf.fit(X_train, y_train)
+    rf_acc = accuracy_score(y_test, rf.predict(X_test))
+    print(f"RF Accuracy: {rf_acc:.4f}")
 
-    print("Training models...")
-    for name, model in models.items():
-        print(f"Training {name}...")
-        model.fit(X_train, y_train)
-        y_pred = model.predict(X_test)
-        mse = mean_squared_error(y_test, y_pred)
-        print(f"{name} MSE: {mse:.4f}")
+    # 2. XGBoost
+    print("Training XGBoost...")
+    xgb_model = xgb.XGBClassifier(
+        n_estimators=50, max_depth=6, objective='multi:softmax', num_class=3,
+        tree_method="hist", n_jobs=-1, random_state=RANDOM_SEED
+    )
+    xgb_model.fit(X_train, y_train)
+    xgb_acc = accuracy_score(y_test, xgb_model.predict(X_test))
+    print(f"XGB Accuracy: {xgb_acc:.4f}")
 
-        if mse < best_mse:
-            best_mse = mse
-            best_model = model
-            best_name = name
+    # 3. LightGBM
+    print("Training LightGBM...")
+    lgb_model = lgb.LGBMClassifier(
+        n_estimators=50, num_leaves=31, objective='multiclass', 
+        class_weight='balanced', verbose=-1, random_state=RANDOM_SEED, n_jobs=-1
+    )
+    lgb_model.fit(X_train, y_train)
+    lgb_acc = accuracy_score(y_test, lgb_model.predict(X_test))
+    print(f"LGB Accuracy: {lgb_acc:.4f}")
 
-    print(f"\nBest model: {best_name} with MSE: {best_mse:.4f}")
-
-    # Save best model
-    ARTIFACTS_DIR.mkdir(exist_ok=True)
-    joblib.dump(best_model, MODEL_PATH)
-    print(f"Model saved to {MODEL_PATH}")
+    # Save models
+    print("Saving models...")
+    joblib.dump(rf, ARTIFACTS_DIR / "rf_model.pkl")
+    joblib.dump(xgb_model, ARTIFACTS_DIR / "xgb_model.pkl")
+    joblib.dump(lgb_model, ARTIFACTS_DIR / "lgb_model.pkl")
+    
+    print(f"✅ Models saved to {ARTIFACTS_DIR}")
 
 if __name__ == "__main__":
     train()

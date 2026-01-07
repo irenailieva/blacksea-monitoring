@@ -1,6 +1,7 @@
 import os
 import sys
 import yaml
+import requests
 from dotenv import load_dotenv
 from loguru import logger
 from flows.downloader import download_data
@@ -41,6 +42,11 @@ def run_pipeline():
     if not db_url:
         logger.error("DATABASE_URL is not set!")
         return
+        
+    # Override output dir to shared ml volume for integration
+    # ETL mounts ./ml to /app/ml
+    # ML mounts ./ml to /app
+    output_dir = "ml/data/inference"
 
     # Ensure tables exist
     logger.info("Ensuring database tables exist...")
@@ -56,12 +62,15 @@ def run_pipeline():
 
     try:
         # 1. Download
-        raw_file = download_data(
+        download_result = download_data(
             aoi=config['aoi'],
             time_range=config['time'],
             output_dir=output_dir,
             mode=mode
         )
+        
+        raw_file = download_result["composite"]
+        ml_bands = download_result["ml_bands"]
         
         # 2. Preprocess
         processed_file = preprocess_raster(raw_file)
@@ -73,6 +82,48 @@ def run_pipeline():
         upload_to_db(raw_file, db_url, config['aoi'])
         upload_to_db(processed_file, db_url, config['aoi'])
         upload_to_db(ndvi_file, db_url, config['aoi'])
+        
+        # 5. ML Inference
+        logger.info("Triggering ML Inference...")
+        # Use ML_BASE_URL if set (docker-compose sets ML_BASE_URL for backend, check if set for ETL)
+        # Default to http://ml:8500 as per docker-compose service name
+        ml_url = os.getenv("ML_BASE_URL", "http://ml:8500")
+        
+        # Define output path for classification map
+        # Output should be in the same volume/dir
+        output_filename = os.path.basename(raw_file).replace(".tif", "_classification.tif")
+        output_path = os.path.join(output_dir, output_filename)
+        
+        # Helper to translate ETL path (/app/ml/...) to ML container path (/app/...)
+        def to_ml_path(p):
+            abs_p = os.path.abspath(p)
+            # /app/ml/data/inference/... -> /app/data/inference/...
+            if "/app/ml/" in abs_p:
+                return abs_p.replace("/app/ml/", "/app/")
+            # Fallback if using relative paths or different mount
+            if p.startswith("ml/"):
+                return p.replace("ml/", "", 1)
+            return p
+        
+        payload = {
+            "b2": to_ml_path(ml_bands["b2"]),
+            "b3": to_ml_path(ml_bands["b3"]),
+            "b4": to_ml_path(ml_bands["b4"]),
+            "b8": to_ml_path(ml_bands["b8"],),
+            "scl": to_ml_path(ml_bands["scl"]),
+            "output_path": to_ml_path(output_path)
+        }
+        
+        try:
+            resp = requests.post(f"{ml_url}/process_scene", json=payload)
+            if resp.status_code == 200:
+                logger.success(f"ML Inference completed. Output: {output_path}")
+                # Upload ML output metadata
+                upload_to_db(output_path, db_url, config['aoi'])
+            else:
+                logger.error(f"ML Inference failed: {resp.status_code} - {resp.text}")
+        except Exception as e:
+            logger.error(f"Failed to contact ML service: {e}")
         
         logger.success("ETL Pipeline completed successfully!")
         

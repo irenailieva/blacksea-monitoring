@@ -3,14 +3,15 @@ CRUD операции за User модел.
 """
 from typing import Optional
 from sqlalchemy.orm import Session
-from passlib.context import CryptContext
+# from passlib.context import CryptContext
 from fastapi import HTTPException, status
 
 from app.models.user import User
 from app.schemas import UserCreate, UserUpdate
+from app.core.security import hash_password, verify_password
 from .base import CRUDBase
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 class CRUDUser(CRUDBase[User]):
@@ -34,7 +35,7 @@ class CRUDUser(CRUDBase[User]):
             )
         
         # Хеширане на паролата
-        hashed_password = pwd_context.hash(obj_in.password)
+        hashed_password = hash_password(obj_in.password)
         
         # Създаване на потребител
         db_user = User(
@@ -61,7 +62,7 @@ class CRUDUser(CRUDBase[User]):
         user = self.get_by_username(db, username=username)
         if not user:
             return None
-        if not pwd_context.verify(password, user.password_hash):
+        if not verify_password(password, user.password_hash):
             return None
         return user
     
@@ -77,7 +78,7 @@ class CRUDUser(CRUDBase[User]):
         
         # Ако се обновява парола, хешираме я
         if "password" in update_data:
-            update_data["password_hash"] = pwd_context.hash(update_data.pop("password"))
+            update_data["password_hash"] = hash_password(update_data.pop("password"))
         
         # Проверка за конфликти при обновяване на username/email
         if "username" in update_data or "email" in update_data:

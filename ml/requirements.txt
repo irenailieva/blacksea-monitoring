@@ -9,3 +9,5 @@ lightgbm
 joblib
 pandas
 shap
+rasterio
+opencv-python

@@ -27,15 +27,25 @@ export default function Regions() {
         e.preventDefault();
         setError('');
         try {
+            // Parse coordinates from string input "[[x,y],[x,y]]"
+            const coords = JSON.parse(newRegion.coordinates || '[]');
+            
+            // Construct GeoJSON Polygon
+            const geometry = {
+                type: "Polygon",
+                coordinates: [coords] // Polygon coordinates are array of rings, first ring is outer
+            };
+
             await api.post('/regions/', {
-                ...newRegion,
-                coordinates: JSON.parse(newRegion.coordinates || '[]') // Expecting JSON array for now
+                name: newRegion.name,
+                type: newRegion.type,
+                geometry: geometry
             });
             setNewRegion({ name: '', type: 'aoi', coordinates: '' });
             fetchRegions();
         } catch (err) {
             console.error(err);
-            setError('Failed to create region. Ensure coordinates are valid JSON geometry/array.');
+            setError('Failed to create region. Ensure coordinates are valid JSON array (e.g. [[28,42],[29,42],...]).');
         }
     };
 

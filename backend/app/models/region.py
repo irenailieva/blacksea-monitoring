@@ -19,6 +19,7 @@ class Region(Base):
     description: Mapped[str | None] = mapped_column(String(255))
     area_km2: Mapped[float | None]
     geometry: Mapped[object] = mapped_column(Geometry("POLYGON", srid=4326), nullable=False)
+    type: Mapped[str] = mapped_column(String(50), default="aoi")
 
     # Relationships
     scenes: Mapped[list["Scene"]] = relationship(back_populates="region")

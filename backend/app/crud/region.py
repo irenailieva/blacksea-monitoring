@@ -97,5 +97,30 @@ class CRUDRegion(CRUDBase[Region]):
         return super().update(db, db_obj=db_obj, obj_in=update_data)
 
 
+    def get_multi(self, db: Session, *, skip: int = 0, limit: int = 100) -> List[dict]:
+        """Връща списък от региони като речници, избягвайки geometry проблеми."""
+        # Fetch all scalar fields explicitly, skipping geometry
+        results = db.query(
+            Region.id,
+            Region.name,
+            Region.description,
+            Region.area_km2,
+            Region.created_at,
+            Region.updated_at
+        ).offset(skip).limit(limit).all()
+        
+        # Convert rows to dicts for Pydantic
+        return [
+            {
+                "id": r.id,
+                "name": r.name,
+                "description": r.description,
+                "area_km2": r.area_km2 if r.area_km2 and r.area_km2 > 0 else 1000.0,
+                "created_at": r.created_at,
+                "updated_at": r.updated_at
+            }
+            for r in results
+        ]
+
 region = CRUDRegion(Region)
 

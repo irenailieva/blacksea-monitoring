@@ -113,8 +113,8 @@ export default function Teams() {
                                     key={team.id}
                                     onClick={() => setSelectedTeam(team)}
                                     className={`p-3 rounded-lg cursor-pointer transition-colors border ${selectedTeam?.id === team.id
-                                            ? 'bg-blue-600/20 border-blue-600/50 text-blue-100'
-                                            : 'bg-gray-800/50 border-gray-800 hover:bg-gray-800 hover:border-gray-700 text-gray-300'
+                                        ? 'bg-blue-600/20 border-blue-600/50 text-blue-100'
+                                        : 'bg-gray-800/50 border-gray-800 hover:bg-gray-800 hover:border-gray-700 text-gray-300'
                                         }`}
                                 >
                                     <div className="font-medium">{team.name}</div>

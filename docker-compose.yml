@@ -51,6 +51,7 @@ services:
       - ML_BASE_URL=http://ml:8500
     volumes:
       - ./backend:/app
+      - ./ml:/app/ml
 
   ml:
     build:
@@ -72,6 +73,7 @@ services:
       - /app/node_modules
     environment:
       - VITE_API_URL=http://localhost:8000
+    command: npm run dev -- --host 0.0.0.0
     depends_on:
       - backend
 

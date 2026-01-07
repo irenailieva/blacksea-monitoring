@@ -55,9 +55,12 @@ app.add_middleware(
 # I will also have to fix docker-compose.yml.
 
 # Let's use a robust path.
-ML_DATA_DIR = os.getenv("ML_DATA_DIR", "../ml")
+# Mount ML data directory as static files
+# Docker maps host ./ml to /app/ml
+ML_DATA_DIR = "/app/ml"
 if os.path.exists(ML_DATA_DIR):
     app.mount("/data", StaticFiles(directory=ML_DATA_DIR), name="data")
+    print(f"Mounted {ML_DATA_DIR} to /data")
 else:
     print(f"WARNING: ML data directory not found at {ML_DATA_DIR}. Static files will not be served.")
 
