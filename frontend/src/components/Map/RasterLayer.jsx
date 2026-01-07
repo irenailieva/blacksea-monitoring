@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useMap } from 'react-leaflet';
-import parseGeoraster from '../../lib/georaster.cjs';
+import parseGeoraster from 'georaster';
 import GeoRasterLayer from 'georaster-layer-for-leaflet';
 
 export default function RasterLayer({ url, opacity = 1 }) {

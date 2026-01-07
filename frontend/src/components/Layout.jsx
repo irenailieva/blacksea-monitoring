@@ -1,6 +1,6 @@
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Map, BarChart2, LogOut, Layers } from 'lucide-react';
+import { Map, BarChart2, LogOut, Layers, Users } from 'lucide-react';
 
 export default function Layout() {
     const { user, logout } = useAuth();
@@ -10,6 +10,7 @@ export default function Layout() {
         { name: 'Map View', path: '/', icon: Map },
         { name: 'Analysis', path: '/analysis', icon: BarChart2 },
         { name: 'Regions', path: '/regions', icon: Layers },
+        { name: 'Teams', path: '/teams', icon: Users },
     ];
 
     return (
@@ -31,8 +32,8 @@ export default function Layout() {
                                 key={item.path}
                                 to={item.path}
                                 className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${isActive
-                                        ? 'bg-blue-600/10 text-blue-400 border border-blue-600/20'
-                                        : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                                    ? 'bg-blue-600/10 text-blue-400 border border-blue-600/20'
+                                    : 'text-gray-400 hover:bg-gray-800 hover:text-white'
                                     }`}
                             >
                                 <Icon size={20} />

@@ -9,16 +9,15 @@ export default function Analysis() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                // Mock data for now, or fetch from backend
-                // In reality, we'd fetch /index-values
-                const mockData = [
-                    { date: '2023-01-01', value: 0.2 },
-                    { date: '2023-02-01', value: 0.3 },
-                    { date: '2023-03-01', value: 0.25 },
-                    { date: '2023-04-01', value: 0.4 },
-                    { date: '2023-05-01', value: 0.35 },
-                ];
-                setData(mockData);
+                const res = await api.get('/index-values/');
+                const formattedData = res.data.map(item => ({
+                    date: new Date(item.created_at).toLocaleDateString(),
+                    value: item.mean_value
+                }));
+                // Sort by date usually good
+                formattedData.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                setData(formattedData);
             } catch (error) {
                 console.error("Failed to fetch analysis data:", error);
             } finally {
@@ -33,7 +32,7 @@ export default function Analysis() {
             <h1 className="text-3xl font-bold text-white mb-8">Water Quality Analysis</h1>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <TrendChart data={data} title="NDVI Trend (Mock Data)" />
+                <TrendChart data={data} title="NDVI Trend" />
                 <TrendChart data={[]} title="Chlorophyll-a Trend (No Data)" />
             </div>
 

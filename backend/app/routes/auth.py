@@ -1,6 +1,6 @@
 from datetime import datetime
 from fastapi import APIRouter, Body, Depends, HTTPException, Response, Request, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr
 from passlib.hash import pbkdf2_sha256
 from sqlalchemy.orm import Session
 
@@ -8,12 +8,14 @@ from app.core.database import get_db
 from app.core.security import create_access_token, get_current_user, require_role, admin_required, ACCESS_TOKEN_EXPIRE_MINUTES
 from app.crud import user as crud_user
 from app.models.user import User
+from app import schemas
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
 # ---- Pydantic схеми ----
 class RegisterRequest(BaseModel):
     username: str = Field(min_length=3, max_length=50)
+    email: EmailStr
     password: str = Field(min_length=6, max_length=128)
     role: str = Field(default="viewer")  # admin|researcher|viewer
 
@@ -43,19 +45,26 @@ def verify_password(password: str, hashed: str) -> bool:
 
 # ---- МАРШРУТИ ----
 @router.post("/register", response_model=UserPublic, status_code=201)
-def register(req: RegisterRequest, request: Request):
-    users = request.app.state.users_store
-    if req.username in users:
-        raise HTTPException(status_code=409, detail="Username already exists")
-    new_id = len(users) + 1
-    users[req.username] = {
-        "id": new_id,
-        "username": req.username,
-        "password_hash": hash_password(req.password),
-        "role": req.role,
-        "created_at": datetime.utcnow().isoformat(),
-    }
-    return {"id": new_id, "username": req.username, "role": req.role}
+@router.post("/register", response_model=UserPublic, status_code=201)
+def register(
+    req: RegisterRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Регистрира нов потребител в базата данни.
+    """
+    user_in = schemas.UserCreate(
+        username=req.username,
+        email=req.email,
+        password=req.password,
+        role=req.role
+    )
+    
+    # Check if user exists (handled in crud.create but we can be explicit if needed, 
+    # though crud.create raises HTTPException 409 already)
+    user = crud_user.create(db=db, obj_in=user_in)
+    
+    return {"id": user.id, "username": user.username, "role": user.role}
 
 @router.post("/login", response_model=TokenResponse, status_code=status.HTTP_200_OK)
 def login(
@@ -89,6 +98,7 @@ def login(
     """
 
     # Автентикация на потребителя
+    print(f"DEBUG LOGIN ATTEMPT: username='{login_data.username}' password='{login_data.password}'")
     user = crud_user.authenticate(
         db=db,
         username=login_data.username,
@@ -96,6 +106,7 @@ def login(
     )
     
     if not user:
+        print(f"DEBUG LOGIN FAILED for {login_data.username}")
         # TODO: Logging - логвай неуспешен опит за login
         # Пример: logger.warning(f"Failed login attempt for username: {login_data.username}")
         raise HTTPException(

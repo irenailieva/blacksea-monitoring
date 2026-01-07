@@ -2,6 +2,7 @@ import os
 import httpx
 from fastapi import FastAPI, Body, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 
 from app.routes import auth as auth_router
@@ -10,6 +11,7 @@ from app.routes import regions as regions_router
 from app.routes import scenes as scenes_router
 from app.routes import index_types as index_types_router
 from app.routes import index_values as index_values_router
+from app.routes import teams as teams_router
 
 from app.core.database import Base, engine
 
@@ -31,6 +33,33 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount ML data directory as static files
+# Docker maps host ./ml to /app/ml (which maps to backend container's /app/ml if volumes set correctly)
+# OR backend maps ./ml to /app/ml directly.
+# Let's check docker-compose.yml:
+# backend: volumes: - ./backend:/app
+# AND it needs access to ml data.
+# The previous analysis showed backend container does NOT have ml volume mounted!
+# We found a bug in the docker-compose.yml check earlier?
+# Wait, let me check docker-compose.yml again in my thought process or re-read it.
+# Re-reading step 9 output:
+#   backend:
+#     volumes:
+#       - ./backend:/app
+# It does NOT have ./ml mounted.
+# So even if I mount StaticFiles, the data isn't there!
+# I need to fix docker-compose.yml first to mount ./ml into backend.
+
+# BUT for now I will add the code to main.py, assuming the volume will be there.
+# I will also have to fix docker-compose.yml.
+
+# Let's use a robust path.
+ML_DATA_DIR = os.getenv("ML_DATA_DIR", "../ml")
+if os.path.exists(ML_DATA_DIR):
+    app.mount("/data", StaticFiles(directory=ML_DATA_DIR), name="data")
+else:
+    print(f"WARNING: ML data directory not found at {ML_DATA_DIR}. Static files will not be served.")
 
 ############## 
 # Initial Test
@@ -85,3 +114,4 @@ app.include_router(regions_router.router)
 app.include_router(scenes_router.router)
 app.include_router(index_types_router.router)
 app.include_router(index_values_router.router)
+app.include_router(teams_router.router)
