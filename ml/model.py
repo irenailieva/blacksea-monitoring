@@ -13,7 +13,8 @@ class WaterQualityModel:
     @property
     def n_features(self):
         # All models should have same n_features
-        return 4 
+        # Features: [B2, B3, B4, B8, NDVI, NDWI]
+        return 6 
 
     def _vote(self, X):
         p1 = self.rf.predict(X)
@@ -27,11 +28,15 @@ class WaterQualityModel:
 
     def predict_one(self, x):
         X = np.array(x, dtype=float).reshape(1, -1)
+        if X.shape[1] != self.n_features:
+            raise ValueError(f"Expected {self.n_features} features, got {X.shape[1]}. Features should be: [B2, B3, B4, B8, NDVI, NDWI]")
         pred = self._vote(X)[0]
         return float(self.mapping.get(pred, 30)) # Default to deep sea if unknown
 
     def predict_batch(self, X):
         X = np.array(X, dtype=float)
+        if X.ndim != 2 or X.shape[1] != self.n_features:
+            raise ValueError(f"Expected 2D array with {self.n_features} features per sample, got shape {X.shape}. Features should be: [B2, B3, B4, B8, NDVI, NDWI]")
         preds = self._vote(X)
         return [float(self.mapping.get(p, 30)) for p in preds]
 

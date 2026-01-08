@@ -4,6 +4,7 @@ import numpy as np
 import cv2
 import os
 import time
+from utils import prepare_features
 
 def process_scene(band_paths: dict, output_path: str, model):
     """
@@ -94,12 +95,13 @@ def process_scene(band_paths: dict, output_path: str, model):
             result_block = np.full(b2.shape, 255, dtype=np.uint8)
             
             # Extract water pixels
-            X_water = np.stack((
-                b2[target_mask], 
-                b3[target_mask], 
-                b4[target_mask], 
-                b8[target_mask]
-            ), axis=1)
+            b2_water = b2[target_mask]
+            b3_water = b3[target_mask]
+            b4_water = b4[target_mask]
+            b8_water = b8[target_mask]
+            
+            # Prepare features with spectral indices: [B2, B3, B4, B8, NDVI, NDWI]
+            X_water = prepare_features(b2_water, b3_water, b4_water, b8_water)
             
             if len(X_water) > 0:
                 # Predict using the model

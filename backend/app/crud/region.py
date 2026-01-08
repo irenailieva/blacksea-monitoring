@@ -105,6 +105,7 @@ class CRUDRegion(CRUDBase[Region]):
             Region.name,
             Region.description,
             Region.area_km2,
+            Region.type,
             Region.created_at,
             Region.updated_at
         ).offset(skip).limit(limit).all()
@@ -116,11 +117,45 @@ class CRUDRegion(CRUDBase[Region]):
                 "name": r.name,
                 "description": r.description,
                 "area_km2": r.area_km2 if r.area_km2 and r.area_km2 > 0 else 1000.0,
+                "type": r.type,
                 "created_at": r.created_at,
                 "updated_at": r.updated_at
             }
             for r in results
         ]
+    
+    def get_multi_with_geometry(self, db: Session, *, skip: int = 0, limit: int = 100) -> List[dict]:
+        """Връща списък от региони с geometry като GeoJSON."""
+        from geoalchemy2.shape import to_shape
+        from sqlalchemy import func
+        
+        regions = db.query(Region).offset(skip).limit(limit).all()
+        
+        result = []
+        for region in regions:
+            try:
+                # Convert PostGIS geometry to GeoJSON
+                geom = to_shape(region.geometry)
+                geojson = {
+                    "type": "Polygon",
+                    "coordinates": [list(geom.exterior.coords)]
+                }
+            except Exception as e:
+                print(f"Error converting geometry for region {region.id}: {e}")
+                geojson = None
+            
+            result.append({
+                "id": region.id,
+                "name": region.name,
+                "description": region.description,
+                "area_km2": region.area_km2,
+                "type": region.type,
+                "geometry": geojson,
+                "created_at": region.created_at,
+                "updated_at": region.updated_at
+            })
+        
+        return result
 
 region = CRUDRegion(Region)
 

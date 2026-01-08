@@ -28,10 +28,13 @@ def create_region(
 def read_regions(
     skip: int = 0,
     limit: int = 100,
+    with_geometry: bool = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Връща списък от региони. Изисква автентикация."""
+    if with_geometry:
+        return crud_region.get_multi_with_geometry(db=db, skip=skip, limit=limit)
     return crud_region.get_multi(db=db, skip=skip, limit=limit)
 
 

@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react';
 import api from '../lib/api';
 import { Users, Plus, Trash2, UserPlus, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 
 export default function Teams() {
     const { user } = useAuth();
+    const { success, error: showError } = useToast();
     const [teams, setTeams] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedTeam, setSelectedTeam] = useState(null);
@@ -56,8 +58,10 @@ export default function Teams() {
             setNewTeamName('');
             setShowCreateModal(false);
             fetchTeams();
+            success('Team created successfully');
         } catch (error) {
-            alert("Failed to create team: " + (error.response?.data?.detail || error.message));
+            const errorMsg = "Failed to create team: " + (error.response?.data?.detail || error.message);
+            showError(errorMsg);
         }
     };
 
@@ -72,8 +76,10 @@ export default function Teams() {
             });
             setNewMemberId('');
             fetchMembers(selectedTeam.id);
+            success('Member added successfully');
         } catch (error) {
-            alert("Failed to add member: " + (error.response?.data?.detail || error.message));
+            const errorMsg = "Failed to add member: " + (error.response?.data?.detail || error.message);
+            showError(errorMsg);
         }
     };
 

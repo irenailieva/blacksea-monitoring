@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '../context/ToastContext';
 
 export default function Login() {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const { login } = useAuth();
+    const { success, error: showError } = useToast();
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
@@ -14,6 +16,7 @@ export default function Login() {
         setError('');
         try {
             await login(username, password);
+            success('Login successful');
             navigate('/');
         } catch (err) {
             console.error(err);
@@ -22,6 +25,7 @@ export default function Login() {
                 msg = JSON.stringify(msg);
             }
             setError(msg);
+            showError(msg);
         }
     };
 

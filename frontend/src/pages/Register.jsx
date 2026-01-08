@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { Waves, Lock, User, Mail } from 'lucide-react';
 
 export default function Register() {
@@ -12,6 +13,7 @@ export default function Register() {
     });
     const [error, setError] = useState('');
     const { register } = useAuth();
+    const { success, error: showError } = useToast();
     const navigate = useNavigate();
 
     const handleChange = (e) => {
@@ -34,9 +36,12 @@ export default function Register() {
                 password: formData.password,
                 role: 'viewer' // Default role
             });
+            success('Registration successful! Please login.');
             navigate('/login'); // Redirect to login after success
         } catch (err) {
-            setError(err.response?.data?.detail || 'Registration failed');
+            const errorMsg = err.response?.data?.detail || 'Registration failed';
+            setError(errorMsg);
+            showError(errorMsg);
         }
     };
 

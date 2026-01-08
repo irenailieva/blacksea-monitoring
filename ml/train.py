@@ -9,6 +9,7 @@ from sklearn.metrics import accuracy_score, classification_report
 import xgboost as xgb
 import lightgbm as lgb
 import warnings
+from utils import prepare_features
 
 # Configuration
 ARTIFACTS_DIR = Path(__file__).parent / "artifacts"
@@ -40,15 +41,23 @@ def train():
 
     y = df['class_id'].apply(cleanup_labels).values.astype(int)
     
-    # Select features
-    feature_cols = ['band_1', 'band_2', 'band_3', 'band_4']
-    if not all(col in df.columns for col in feature_cols):
-        print(f"Error: Missing feature columns. Expected: {feature_cols}")
+    # Select base features (spectral bands)
+    base_cols = ['band_1', 'band_2', 'band_3', 'band_4']
+    if not all(col in df.columns for col in base_cols):
+        print(f"Error: Missing feature columns. Expected: {base_cols}")
         return
-        
-    X = df[feature_cols].values
+    
+    # Extract bands (assuming Sentinel-2: B2=Blue, B3=Green, B4=Red, B8=NIR)
+    # band_1 = Blue (B2), band_2 = Green (B3), band_3 = Red (B4), band_4 = NIR (B8)
+    blue = df['band_1'].values.astype(float)
+    green = df['band_2'].values.astype(float)
+    red = df['band_3'].values.astype(float)
+    nir = df['band_4'].values.astype(float)
+    
+    # Prepare features with spectral indices: [B2, B3, B4, B8, NDVI, NDWI]
+    X = prepare_features(blue, green, red, nir)
 
-    print(f"Training on {len(X)} samples with {len(feature_cols)} features...")
+    print(f"Training on {len(X)} samples with 6 features: [B2, B3, B4, B8, NDVI, NDWI]...")
     
     # Split data
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=RANDOM_SEED, stratify=y)
