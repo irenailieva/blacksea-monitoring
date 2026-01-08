@@ -1,122 +1,144 @@
-```markdown
-# Project Specification: Black Sea Monitoring System (Frontend)
+# Project Specification: Black Sea Aquatic Monitoring System
 
 ## 1. Role & Objective
-Act as a Senior Frontend Engineer. Your goal is to build the client-side of a satellite monitoring system. The system detects algae blooms in the Black Sea using Sentinel-2 data and Machine Learning.
+Act as a Senior Frontend Engineer. Your goal is to build the web interface for a system that maps aquatic parameters (underwater vegetation, algae) along the Bulgarian coast. The system uses Sentinel-2 satellite data, corrected and classified via ML ensembles (XGBoost/LightGBM).
 
 ## 2. Tech Stack
 - **Framework:** React 18 (Vite) + TypeScript
-- **Styling:** Tailwind CSS + shadcn/ui (use Lucide React for icons)
-- **Maps:** react-leaflet (v4+) + leaflet
-- **State Management:** Zustand (preferred) or React Context
-- **Networking:** Axios (Must use interceptors for JWT refresh logic)
-- **Routing:** React Router DOM (v6+)
+- **Styling:** Tailwind CSS + shadcn/ui (Radix Primitives)
+- **Icons:** Lucide React
+- **Maps:** react-leaflet (v4+) + leaflet. (Must support multiple base layers: OSM, Satellite).
+- **Charts:** Recharts (for temporal analysis and SHAP values).
+- **State Management:** Zustand.
+- **Networking:** Axios.
+- **Routing:** React Router DOM (v6+).
 
-## 3. Backend Data Structures (Domain Models)
-*The backend is FastAPI + PostGIS. Use these TypeScript interfaces which match the database schema exactly:*
+## 3. Architecture & Data Flow
+- **Pattern:** Three-layer web app. React communicates with a **FastAPI Gateway**.
+- **Auth:** JWT Access Tokens are stored in **HttpOnly cookies**.
+  - *Crucial:* The frontend does NOT store tokens in LocalStorage. Axios must be configured with `withCredentials: true`.
+- **Real-time:** WebSockets (or polling) used for ETL status updates and Notifications.
+
+## 4. Domain Models (TypeScript Interfaces)
 
 ```typescript
-// derived from table "user"
+// User & Auth
 export interface User {
   id: number;
-  username: string;
   email: string;
   role: 'viewer' | 'analyst' | 'admin';
-  // Auth fields (usually handled internally but present in DB schema)
-  refresh_token?: string; 
-  refresh_token_expires_at?: string; // ISO timestamp
+  preferences?: { default_region_id: number; notifications: boolean };
 }
 
-// derived from table "region"
-export interface Region {
+// Teams
+export interface Team {
   id: number;
   name: string;
-  description: string;
-  type: 'aoi' | string; // Default is 'aoi' (Area of Interest)
-  geometry: GeoJSON.Polygon; // PostGIS GEOMETRY
+  members: User[];
 }
 
-// derived from table "scene"
+// Geography
+export interface Region {
+  id: number;
+  name: string; // e.g., "Varna Bay"
+  geometry: GeoJSON.Polygon;
+  type: 'aoi'; 
+}
+
+// Satellite Data
 export interface Scene {
   id: number;
-  sentinel_id: string; // e.g., "S2A_MSIL2A_2023..."
-  acquired_at: string; // ISO timestamp
-  cloud_coverage: number; // decimal(5,2)
-  region_id: number;
+  sentinel_id: string;
+  acquired_at: string; // ISO Date
+  cloud_coverage: number;
+  etl_status: 'pending' | 'processing' | 'completed' | 'failed';
 }
 
-// derived from table "classification_result"
+// Analysis Results
 export interface ClassificationResult {
   id: number;
   scene_id: number;
-  label: 'vegetation' | 'sand' | 'water' | 'other';
+  label: 'vegetation' | 'sand' | 'water';
   area_m2: number;
-  geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon; 
+  geometry: GeoJSON.Polygon; // The colored overlay
+}
+
+// ML Explainability
+export interface ShapValue {
+  feature_name: string; // e.g., "NDWI", "Blue_Band"
+  importance_value: number;
 }
 
 ```
 
-## 4. API Endpoints Contract
+## 5. Functional Requirements (Screens & Features)
 
-Assume the backend provides these endpoints:
+### A. Authentication
 
-* `POST /auth/login` -> Returns `{ access_token: string, refresh_token: string, token_type: "bearer" }`
-* `POST /auth/refresh` -> Accepts `{ refresh_token: string }`. Returns `{ access_token: string, refresh_token: string }`
-* `GET /users/me` -> Returns `User`
-* `GET /regions` -> Returns `Region[]`
-* `GET /scenes` -> Accepts query params `?region_id=X&start_date=YYYY-MM-DD`. Returns `Scene[]`
-* `GET /analysis/results/{scene_id}` -> Returns GeoJSON FeatureCollection of classification results.
+* Login screen.
+* Handle HttpOnly cookie flow (Axios interceptors for 401 response -> redirect to login).
 
-## 5. Implementation Plan (Step-by-Step)
+### B. Map Dashboard (Main Screen)
 
-Please implement the solution following these steps. **Wait for my confirmation after each step.**
-
-### Step 1: Foundation & Auth (With Refresh Logic)
-
-* Set up the **Axios instance**:
-* **Request Interceptor:** Inject the `Bearer` token from localStorage.
-* **Response Interceptor:** Handle `401 Unauthorized` errors. If a 401 occurs, attempt to call `/auth/refresh` using the stored refresh token. If successful, retry the original failed request. If refresh fails, log the user out.
+* **Base Layers:** Toggle between OpenStreetMap, Satellite (Esri/Google), and Hydrography.
+* **Filters:** Date Range, Cloud Coverage (<%), Depth.
+* **Overlays:**
+* Regions (AOI) outlines.
+* Classification polygons (Green for vegetation, Yellow for sand).
 
 
-* Create an `useAuth` store (Zustand) to manage `user`, `accessToken`, and `refreshToken`.
-* Create a simple Login Page.
+* **Interaction:** Clicking a polygon shows a popup with area size and properties.
 
-### Step 2: App Layout (Dashboard Shell)
+### C. Analysis Dashboard
 
-* Create a standard layout with:
-* **Sidebar (Left):** For filters.
-* **Header (Top):** Logo and User Profile menu.
-* **Main Content:** This will hold the Map.
+* **Charts:** Line chart showing "Vegetation Area (m²)" over years/seasons for a selected region.
+* **Explainability:** Bar chart showing SHAP values (feature importance) for specific classification results.
+* **Export:** Button to export current view/report as PDF or CSV.
 
+### D. Data & Admin
 
-* Use `shadcn/ui` components for the structure.
+* **Manual Upload:** UI to upload GPS points or Drone Orthomosaics (GeoTIFF).
+* **ETL Monitor:** Visual indicator (progress bar or status badge) for currently processing Sentinel-2 scenes.
+* **Team Management:** (Admin only) Add/Remove users from project groups.
 
-### Step 3: Interactive Map Component
+### E. Notifications
 
-* Implement the `MapContainer` from `react-leaflet`.
-* **Base Layer:** Use OpenStreetMap or Esri Satellite.
-* **Regions Layer:** Fetch `Region[]` and draw them as blue outlines.
-* *Note:* Use the `type` field to potentially style them differently (though currently all are 'aoi').
+* UI element (bell icon) to show alerts:
+* Drop in vegetation coverage > 20%.
+* New scene available.
+* ETL process finished.
 
 
 
-### Step 4: Connecting the Flow
+## 6. Implementation Plan (Step-by-Step)
 
-* In the Sidebar, when a user selects a Region and Date, fetch the matching `Scenes`.
-* Display the scenes in a list.
-* When a user clicks a `Scene`, fetch its `ClassificationResults`.
-* Overlay the results on the map:
-* Color **Green** (#00FF00) for 'vegetation' (algae).
-* Color **Yellow** for 'sand'.
-* Add tooltips showing `area_m2`.
+**Wait for my confirmation after each step.**
 
+### Step 1: Foundation & Secure Auth
 
+* Setup Axios with `withCredentials: true` to handle HttpOnly cookies.
+* Create `useAuth` store (Zustand) to fetch `GET /users/me` on app load.
+* Implement Login Page.
 
----
+### Step 2: Main Layout & Navigation
 
-**Instruction to Agent:**
-Start by analyzing this specification. Then, generate the code for **Step 1 (Foundation & Auth)** focusing on the robust Axios interceptor logic.
+* Sidebar: Links to "Map", "Analysis", "Data/Uploads", "Admin".
+* Header: User Profile, Team Switcher, Notification Bell.
+* Use `shadcn/ui` components.
 
-```
+### Step 3: Advanced Map Component
 
-```
+* Implement `MapContainer` with `LayersControl` (Base maps).
+* Fetch and display `Regions`.
+* Implement side panel for filtering Scenes (Date, Cloud %).
+
+### Step 4: Analysis & Charts
+
+* Create the "Analysis" page.
+* Implement `Recharts` to visualize dummy data (until API is ready) for vegetation trends.
+* Implement SHAP visualization component.
+
+### Step 5: Admin & Data Operations
+
+* Create File Upload component for manual GeoTIFFs.
+* Create Team Management table.

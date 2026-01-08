@@ -1,0 +1,60 @@
+import { MapContainer, TileLayer, Polygon, Popup, LayersControl } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import { Region } from '../../api/types';
+import L from 'leaflet';
+
+// Fix for default marker icon in Leaflet + React
+import icon from 'leaflet/dist/images/marker-icon.png';
+import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+
+let DefaultIcon = L.icon({
+    iconUrl: icon,
+    shadowUrl: iconShadow,
+    iconSize: [25, 41],
+    iconAnchor: [12, 41]
+});
+
+L.Marker.prototype.options.icon = DefaultIcon;
+
+interface MapProps {
+    regions: Region[];
+}
+
+export default function AppMap({ regions }: MapProps) {
+    // Center of Black Sea approx
+    const center: [number, number] = [43.0, 31.0];
+
+    return (
+        <div className="h-full w-full rounded-lg overflow-hidden border">
+            <MapContainer center={center} zoom={7} scrollWheelZoom={true} className="h-full w-full">
+                <LayersControl position="topright">
+                    <LayersControl.BaseLayer checked name="OpenStreetMap">
+                        <TileLayer
+                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        />
+                    </LayersControl.BaseLayer>
+                    <LayersControl.BaseLayer name="Satellite (Esri)">
+                        <TileLayer
+                            attribution='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+                            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                        />
+                    </LayersControl.BaseLayer>
+                </LayersControl>
+
+                {regions.map((region) => (
+                    <Polygon
+                        key={region.id}
+                        pathOptions={{ color: 'blue', fillColor: 'blue', fillOpacity: 0.1 }}
+                        positions={region.geometry.coordinates[0].map(coord => [coord[1], coord[0]] as [number, number])} // GeoJSON is [lng, lat], Leaflet is [lat, lng]
+                    >
+                        <Popup>
+                            <strong>{region.name}</strong> <br />
+                            Type: {region.type}
+                        </Popup>
+                    </Polygon>
+                ))}
+            </MapContainer>
+        </div>
+    );
+}

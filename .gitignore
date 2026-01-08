@@ -6,4 +6,12 @@ __pycache__/
 node_modules/
 .env
 .cursorrules
-.md
+
+# ML Artifacts and Data
+ml/artifacts/*.pkl
+ml/artifacts/*.json
+ml/data/
+*.pkl
+*.pt
+*.h5
+*.onnx

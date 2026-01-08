@@ -1,7 +1,6 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { useToast } from '../context/ToastContext';
+import { useState, ChangeEvent, FormEvent } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import useAuth from '../store/useAuth';
 import { Waves, Lock, User, Mail } from 'lucide-react';
 
 export default function Register() {
@@ -12,15 +11,15 @@ export default function Register() {
         confirmPassword: ''
     });
     const [error, setError] = useState('');
+    const [successMsg, setSuccessMsg] = useState('');
     const { register } = useAuth();
-    const { success, error: showError } = useToast();
     const navigate = useNavigate();
 
-    const handleChange = (e) => {
+    const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
         setError('');
 
@@ -36,12 +35,11 @@ export default function Register() {
                 password: formData.password,
                 role: 'viewer' // Default role
             });
-            success('Registration successful! Please login.');
-            navigate('/login'); // Redirect to login after success
-        } catch (err) {
+            setSuccessMsg('Registration successful! Please login.');
+            setTimeout(() => navigate('/login'), 2000);
+        } catch (err: any) {
             const errorMsg = err.response?.data?.detail || 'Registration failed';
             setError(errorMsg);
-            showError(errorMsg);
         }
     };
 
@@ -60,6 +58,11 @@ export default function Register() {
                     {error && (
                         <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm text-center">
                             {error}
+                        </div>
+                    )}
+                    {successMsg && (
+                        <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-600 rounded-lg text-sm text-center">
+                            {successMsg}
                         </div>
                     )}
 
