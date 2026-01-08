@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from .team import TeamMembership
     from .notification import Notification
 
-user_role = ENUM("admin", "researcher", "viewer", name="user_role", create_type=False)
+user_role = ENUM("admin", "researcher", "viewer", name="user_role")
 
 
 class User(Base):

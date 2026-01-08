@@ -73,7 +73,7 @@ def test_get_regions_success(client, auth_headers_viewer):
     assert isinstance(response.json(), list)
 
 
-def test_get_region_by_id_success(client, auth_headers_researcher):
+def test_get_region_by_id_success(client, auth_headers_researcher, auth_headers_viewer):
     """Тест за получаване на регион по ID."""
     # Създаваме регион
     region_data = {

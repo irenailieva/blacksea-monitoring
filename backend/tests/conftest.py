@@ -13,17 +13,16 @@ from app.models.scene import Scene
 from app.models.index_type import IndexType
 from app.models.index_value import IndexValue
 from app.main import app
-from app.core.security import create_access_token
-from passlib.context import CryptContext
+from app.core.security import create_access_token, hash_password
 
 # Тестова база данни (SQLite in-memory)
 # Забележка: GeoAlchemy2 изисква PostGIS, но за тестове използваме SQLite
-# В production трябва да се използва PostgreSQL с PostGIS
-SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+# В production трябва да се използва# Test database setup
+# SQLALCHEMY_DATABASE_URL = "sqlite:///./test_auth.db"
+# engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+SQLALCHEMY_DATABASE_URL = "postgresql://postgres:1401@db:5432/blacksea_monitor_test"
+engine = create_engine(SQLALCHEMY_DATABASE_URL)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 @pytest.fixture(scope="function")
@@ -58,7 +57,7 @@ def test_user(db: Session) -> User:
     user = User(
         username="testuser",
         email="test@example.com",
-        password_hash=pwd_context.hash("testpass123"),
+        password_hash=hash_password("testpass123"),
         role="viewer"
     )
     db.add(user)
@@ -73,7 +72,7 @@ def test_admin(db: Session) -> User:
     admin = User(
         username="admin",
         email="admin@example.com",
-        password_hash=pwd_context.hash("adminpass123"),
+        password_hash=hash_password("adminpass123"),
         role="admin"
     )
     db.add(admin)
@@ -88,7 +87,7 @@ def test_researcher(db: Session) -> User:
     researcher = User(
         username="researcher",
         email="researcher@example.com",
-        password_hash=pwd_context.hash("researcherpass123"),
+        password_hash=hash_password("researcherpass123"),
         role="researcher"
     )
     db.add(researcher)

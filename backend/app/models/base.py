@@ -12,7 +12,8 @@ NAMING_CONVENTION = {
 }
 
 # Shared metadata with naming convention
-metadata = MetaData(schema="public", naming_convention=NAMING_CONVENTION)
+# Shared metadata with naming convention
+metadata = MetaData(naming_convention=NAMING_CONVENTION)
 
 
 class Base(DeclarativeBase):

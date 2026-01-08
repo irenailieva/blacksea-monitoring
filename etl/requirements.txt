@@ -27,3 +27,6 @@ prefect==3.1.10
 
 pystac-client
 odc-stac
+
+pytest
+

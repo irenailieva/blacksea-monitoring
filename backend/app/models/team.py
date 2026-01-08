@@ -9,7 +9,7 @@ from .base import Base
 if TYPE_CHECKING:
     from .user import User
 
-team_role = ENUM("member", "moderator", "admin", name="team_role", create_type=False)
+team_role = ENUM("member", "moderator", "admin", name="team_role")
 
 
 class Team(Base):

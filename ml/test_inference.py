@@ -15,11 +15,11 @@ OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # Define file paths
 band_paths = {
-    'b2': str(DATA_DIR / "T35TNH_20250910T085721_B02_10m.jp2"),
-    'b3': str(DATA_DIR / "T35TNH_20250910T085721_B03_10m.jp2"),
-    'b4': str(DATA_DIR / "T35TNH_20250910T085721_B04_10m.jp2"),
-    'b8': str(DATA_DIR / "T35TNH_20250910T085721_B08_10m.jp2"),
-    'scl': str(DATA_DIR / "T35TNH_20250910T085721_SCL_20m.jp2")
+    'b2': str(DATA_DIR / "mock_B02.tif"),
+    'b3': str(DATA_DIR / "mock_B03.tif"),
+    'b4': str(DATA_DIR / "mock_B04.tif"),
+    'b8': str(DATA_DIR / "mock_B08.tif"),
+    'scl': str(DATA_DIR / "mock_SCL.tif")
 }
 
 output_tif = str(OUTPUT_DIR / "classification_map.tif")
