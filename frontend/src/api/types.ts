@@ -36,6 +36,7 @@ export interface Scene {
     acquired_at: string; // ISO Date String
     cloud_coverage: number;
     etl_status: 'pending' | 'processing' | 'completed' | 'failed';
+    geometry?: GeoJSON.Polygon;
 }
 
 /**

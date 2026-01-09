@@ -6,18 +6,21 @@ def seed():
     db = SessionLocal()
     try:
         username = "admin"
-        if not db.query(User).filter(User.username == username).first():
+        user = db.query(User).filter(User.username == username).first()
+        if not user:
             user = User(
                 username=username,
                 email="admin@example.com",
-                password_hash=hash_password("admin"),
+                password_hash=hash_password("admin123"),
                 role="admin"
             )
             db.add(user)
             db.commit()
             print("User 'admin' created successfully.")
         else:
-            print("User 'admin' already exists.")
+            user.password_hash = hash_password("admin123")
+            db.commit()
+            print("User 'admin' password updated successfully.")
     except Exception as e:
         print(f"Error seeding user: {e}")
     finally:

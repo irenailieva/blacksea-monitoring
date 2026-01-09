@@ -3,8 +3,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Upload, FileType, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Upload, FileType, CheckCircle2, AlertCircle, Activity } from 'lucide-react';
 import api from '@/api/axios';
+import { EtlMonitor } from '@/components/EtlMonitor';
 
 export default function DataUpload() {
     const [file, setFile] = useState<File | null>(null);
@@ -61,10 +62,10 @@ export default function DataUpload() {
                     <CardContent className="space-y-4">
                         <div className="grid w-full items-center gap-1.5">
                             <Label htmlFor="data-file">Select File</Label>
-                            <Input 
-                                id="data-file" 
-                                type="file" 
-                                accept=".tif,.tiff,.csv,.geojson,.json" 
+                            <Input
+                                id="data-file"
+                                type="file"
+                                accept=".tif,.tiff,.csv,.geojson,.json"
                                 onChange={handleFileChange}
                                 disabled={uploading}
                             />
@@ -84,9 +85,8 @@ export default function DataUpload() {
                         )}
 
                         {status && (
-                            <div className={`p-3 rounded-md flex items-center gap-2 text-sm ${
-                                status.type === 'success' ? 'bg-green-500/10 text-green-500' : 'bg-destructive/10 text-destructive'
-                            }`}>
+                            <div className={`p-3 rounded-md flex items-center gap-2 text-sm ${status.type === 'success' ? 'bg-green-500/10 text-green-500' : 'bg-destructive/10 text-destructive'
+                                }`}>
                                 {status.type === 'success' ? (
                                     <CheckCircle2 className="h-4 w-4" />
                                 ) : (
@@ -96,9 +96,9 @@ export default function DataUpload() {
                             </div>
                         )}
 
-                        <Button 
-                            className="w-full" 
-                            disabled={!file || uploading} 
+                        <Button
+                            className="w-full"
+                            disabled={!file || uploading}
                             onClick={handleUpload}
                         >
                             {uploading ? (
@@ -113,31 +113,48 @@ export default function DataUpload() {
                     </CardContent>
                 </Card>
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Guidelines</CardTitle>
-                        <CardDescription>
-                            Important information for successful data processing.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4 text-sm">
-                        <div className="space-y-2">
-                            <h4 className="font-medium">GeoTIFFs</h4>
-                            <ul className="list-disc pl-4 space-y-1 text-muted-foreground">
-                                <li>Must be in EPSG:4326 or UTM 35N projection.</li>
-                                <li>Max file size: 500MB.</li>
-                                <li>Ensure bands are correctly ordered (B4, B3, B2, B8 for Sentinel-2).</li>
-                            </ul>
-                        </div>
-                        <div className="space-y-2">
-                            <h4 className="font-medium">GPS Data</h4>
-                            <ul className="list-disc pl-4 space-y-1 text-muted-foreground">
-                                <li>CSV files must have 'lat' and 'lon' columns.</li>
-                                <li>GeoJSON must contain FeatureCollection of Polygons or Points.</li>
-                            </ul>
-                        </div>
-                    </CardContent>
-                </Card>
+                <div className="grid gap-6 md:grid-cols-2">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Activity className="h-5 w-5" />
+                                Processing Monitor
+                            </CardTitle>
+                            <CardDescription>
+                                Real-time status of Sentinel-2 scene classification jobs.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <EtlMonitor />
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Guidelines</CardTitle>
+                            <CardDescription>
+                                Important information for successful data processing.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4 text-sm">
+                            <div className="space-y-2">
+                                <h4 className="font-medium">GeoTIFFs</h4>
+                                <ul className="list-disc pl-4 space-y-1 text-muted-foreground">
+                                    <li>Must be in EPSG:4326 or UTM 35N projection.</li>
+                                    <li>Max file size: 500MB.</li>
+                                    <li>Ensure bands are correctly ordered (B4, B3, B2, B8 for Sentinel-2).</li>
+                                </ul>
+                            </div>
+                            <div className="space-y-2">
+                                <h4 className="font-medium">GPS Data</h4>
+                                <ul className="list-disc pl-4 space-y-1 text-muted-foreground">
+                                    <li>CSV files must have 'lat' and 'lon' columns.</li>
+                                    <li>GeoJSON must contain FeatureCollection of Polygons or Points.</li>
+                                </ul>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
         </div>
     );

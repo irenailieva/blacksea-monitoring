@@ -1,64 +1,51 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import AppMap from '../components/Map/Map';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar } from 'lucide-react';
-// import { Region } from '../api/types';
-
-// Mock Data for now
-const MOCK_REGIONS = [
-    {
-        id: 1,
-        name: 'Varna Bay',
-        type: 'aoi',
-        geometry: {
-            type: 'Polygon',
-            coordinates: [
-                [
-                    [27.88, 43.18],
-                    [27.95, 43.18],
-                    [27.95, 43.22],
-                    [27.88, 43.22],
-                    [27.88, 43.18]
-                ]
-            ]
-        }
-    },
-    {
-        id: 2,
-        name: 'Burgas Bay',
-        type: 'aoi',
-        geometry: {
-            type: 'Polygon',
-            coordinates: [
-                [
-                    [27.45, 42.45],
-                    [27.55, 42.45],
-                    [27.55, 42.55],
-                    [27.45, 42.55],
-                    [27.45, 42.45]
-                ]
-            ]
-        }
-    }
-];
-
+import { Calendar, Loader2, Layers, Image as ImageIcon } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
-import { Layers, Image as ImageIcon } from 'lucide-react';
+import { Region, Scene } from '../api/types';
+import api from '@/api/axios';
 
-// Mock Scenes
-const MOCK_SCENES = [
-    { id: 1, scene_id: 'S2A_MSIL2A_20230715', acquisition_date: '2023-07-15', cloud_cover: 2.1, url: 'http://localhost:8000/data/inference/scene_1_classification.tif' },
-    { id: 2, scene_id: 'S2B_MSIL2A_20230720', acquisition_date: '2023-07-20', cloud_cover: 8.5, url: 'http://localhost:8000/data/inference/scene_2_classification.tif' },
-];
+// Mock Data replaced by API calls in useEffect
 
 export default function Dashboard() {
-    const [dateRange, setDateRange] = useState('Last 30 Days');
+    const dateRange = 'Last 30 Days';
     const [cloudCover, setCloudCover] = useState([10]);
-    const [selectedScene, setSelectedScene] = useState<typeof MOCK_SCENES[0] | null>(null);
+    const [selectedScene, setSelectedScene] = useState<Scene | null>(null);
+    const [regions, setRegions] = useState<Region[]>([]);
+    const [scenes, setScenes] = useState<Scene[]>([]);
+    const [loading, setLoading] = useState(true);
 
-    const filteredScenes = MOCK_SCENES.filter(s => s.cloud_cover <= cloudCover[0]);
+    useEffect(() => {
+        const fetchData = async () => {
+            setLoading(true);
+            try {
+                const [regionsRes, scenesRes] = await Promise.all([
+                    api.get<Region[]>('/regions?with_geometry=true'),
+                    api.get<Scene[]>('/scenes')
+                ]);
+                setRegions(regionsRes.data);
+                setScenes(scenesRes.data);
+            } catch (error) {
+                console.error('Failed to fetch data:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchData();
+    }, []);
+
+    const filteredScenes = scenes.filter(s => s.cloud_coverage <= cloudCover[0]);
+
+    if (loading) {
+        return (
+            <div className="flex h-full items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        );
+    }
 
     return (
         <div className="flex h-full flex-col space-y-4">
@@ -121,11 +108,11 @@ export default function Dashboard() {
                                                 }`}
                                         >
                                             <div className="flex flex-col gap-1">
-                                                <span className="text-xs font-mono font-bold truncate">{scene.scene_id}</span>
+                                                <span className="text-xs font-mono font-bold truncate">{scene.sentinel_id}</span>
                                                 <div className="flex items-center justify-between">
-                                                    <span className="text-[10px] text-muted-foreground">{scene.acquisition_date}</span>
+                                                    <span className="text-[10px] text-muted-foreground">{new Date(scene.acquired_at).toLocaleDateString()}</span>
                                                     <Badge variant="outline" className="text-[9px] h-4">
-                                                        {scene.cloud_cover}% cloud
+                                                        {scene.cloud_coverage}% cloud
                                                     </Badge>
                                                 </div>
                                             </div>
@@ -151,8 +138,8 @@ export default function Dashboard() {
                     <Card className="h-full">
                         <CardContent className="p-0 h-full">
                             <AppMap
-                                regions={MOCK_REGIONS as any}
-                                selectedSceneUrl={selectedScene?.url}
+                                regions={regions}
+                                selectedSceneUrl={selectedScene ? `${import.meta.env.VITE_API_URL}/data/inference/${selectedScene.sentinel_id}_classification.tif` : undefined}
                             />
                         </CardContent>
                     </Card>

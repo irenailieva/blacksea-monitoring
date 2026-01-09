@@ -24,7 +24,13 @@ const data = [
     },
 ]
 
-export function ShapExplanation() {
+interface ShapExplanationProps {
+    regionId?: string;
+}
+
+export function ShapExplanation({ regionId }: ShapExplanationProps) {
+    // In a real app, use regionId to fetch SHAP values
+    console.log('Fetching SHAP values for region:', regionId);
     return (
         <Card className="col-span-1 lg:col-span-1">
             <CardHeader>

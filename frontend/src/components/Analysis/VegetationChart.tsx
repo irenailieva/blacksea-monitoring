@@ -40,7 +40,37 @@ const data = [
     },
 ]
 
-export function VegetationChart() {
+interface VegetationChartProps {
+    regionId?: string;
+}
+
+interface ShapExplanationProps {
+    regionId?: string;
+}
+
+export function ShapExplanation({ regionId }: ShapExplanationProps) {
+    // In a real app, use regionId to fetch SHAP values
+    console.log('Fetching SHAP values for region:', regionId);
+    return (
+        <Card className="col-span-1 lg:col-span-2">
+            <CardHeader>
+                <CardTitle>SHAP Explanation</CardTitle>
+                <CardDescription>
+                    Feature importance for predictions
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="pb-4">
+                <div className="h-[300px] flex items-center justify-center text-gray-500">
+                    SHAP explanation chart will go here.
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+
+export function VegetationChart({ regionId }: VegetationChartProps) {
+    // In a real app, use regionId to fetch specific data
+    console.log('Fetching vegetation data for region:', regionId);
     return (
         <Card className="col-span-1 lg:col-span-2">
             <CardHeader>

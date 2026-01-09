@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -10,7 +10,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { UserPlus, MoreHorizontal, Mail, Shield } from 'lucide-react';
+import { UserPlus, MoreHorizontal, Mail, Shield, Loader2 } from 'lucide-react';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -19,17 +19,36 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-// Mock Data
-const MOCK_USERS = [
-    { id: 1, name: 'Admin User', email: 'admin@blacksea.bg', role: 'admin', status: 'active' },
-    { id: 2, name: 'Ivan Ivanov', email: 'ivan@blacksea.bg', role: 'analyst', status: 'active' },
-    { id: 3, name: 'Maria Petrova', email: 'maria@blacksea.bg', role: 'viewer', status: 'pending' },
-    { id: 4, name: 'Stefan Georgiev', email: 'stefan@blacksea.bg', role: 'analyst', status: 'active' },
-];
+import api from '@/api/axios';
+import { User } from '@/api/types';
 
 export default function TeamManagement() {
-    const [users] = useState(MOCK_USERS);
+    const [users, setUsers] = useState<User[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchUsers = async () => {
+            try {
+                // In a real app, this might be /teams/:id/members or similar
+                // For now, let's try to fetch all users if allowed, or just /users/me
+                const response = await api.get<User[]>('/users');
+                setUsers(response.data);
+            } catch (error) {
+                console.error('Failed to fetch users:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchUsers();
+    }, []);
+
+    if (loading) {
+        return (
+            <div className="flex h-full items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        );
+    }
 
     return (
         <div className="container mx-auto py-6 space-y-6">
@@ -68,7 +87,7 @@ export default function TeamManagement() {
                                 <TableRow key={user.id}>
                                     <TableCell>
                                         <div className="flex flex-col">
-                                            <span className="font-medium">{user.name}</span>
+                                            <span className="font-medium">{user.email.split('@')[0]}</span>
                                             <span className="text-xs text-muted-foreground flex items-center gap-1">
                                                 <Mail className="h-3 w-3" />
                                                 {user.email}
@@ -82,8 +101,8 @@ export default function TeamManagement() {
                                         </div>
                                     </TableCell>
                                     <TableCell>
-                                        <Badge variant={user.status === 'active' ? 'default' : 'secondary'}>
-                                            {user.status}
+                                        <Badge variant="default">
+                                            active
                                         </Badge>
                                     </TableCell>
                                     <TableCell className="text-right">

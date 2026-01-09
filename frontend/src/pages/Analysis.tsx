@@ -1,13 +1,42 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { VegetationChart } from '@/components/Analysis/VegetationChart';
 import { ShapExplanation } from '@/components/Analysis/ShapExplanation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from '@/components/ui/button';
-import { Download } from 'lucide-react';
+import { Download, Loader2 } from 'lucide-react';
+import api from '@/api/axios';
+import { Region } from '@/api/types';
 
 export default function Analysis() {
-    const [selectedRegion, setSelectedRegion] = useState('varna-bay');
+    const [selectedRegion, setSelectedRegion] = useState<string>('');
+    const [regions, setRegions] = useState<Region[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchRegions = async () => {
+            try {
+                const response = await api.get<Region[]>('/regions');
+                setRegions(response.data);
+                if (response.data.length > 0) {
+                    setSelectedRegion(response.data[0].id.toString());
+                }
+            } catch (error) {
+                console.error('Failed to fetch regions:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchRegions();
+    }, []);
+
+    if (loading) {
+        return (
+            <div className="flex h-full items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col space-y-4 h-full  overflow-y-auto pr-2">
@@ -19,8 +48,11 @@ export default function Analysis() {
                             <SelectValue placeholder="Select Region" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="varna-bay">Varna Bay</SelectItem>
-                            <SelectItem value="burgas-bay">Burgas Bay</SelectItem>
+                            {regions.map(region => (
+                                <SelectItem key={region.id} value={region.id.toString()}>
+                                    {region.name}
+                                </SelectItem>
+                            ))}
                         </SelectContent>
                     </Select>
                     <Button size="icon" variant="outline">
@@ -60,8 +92,8 @@ export default function Analysis() {
             </div>
 
             <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-3">
-                <VegetationChart />
-                <ShapExplanation />
+                <VegetationChart regionId={selectedRegion} />
+                <ShapExplanation regionId={selectedRegion} />
             </div>
 
             <div className="grid gap-4 md:grid-cols-1">

@@ -10,6 +10,7 @@ from app.core.security import get_current_user, require_any_role
 from app.models.user import User
 from app import schemas
 from app.crud import scene as crud_scene
+from app.crud import etl_job as crud_etl_job
 
 router = APIRouter(prefix="/scenes", tags=["scenes"])
 
@@ -86,4 +87,19 @@ def delete_scene(
         )
     crud_scene.delete(db=db, id=scene_id)
     return None
+
+
+@router.get("/etl-status", response_model=List[schemas.ETLJobRead])
+def get_etl_status(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Връща статуса на активните ETL задачи."""
+    # За демо цели, ако няма нищо в базата, връщаме малко мок данни
+    jobs = crud_etl_job.etl_job.get_active_jobs(db)
+    if not jobs:
+        # Return empty list or some mock for demo if needed
+        # But for now, let's return whatever is in the DB
+        return crud_etl_job.etl_job.get_recent_jobs(db, limit=5)
+    return jobs
 
