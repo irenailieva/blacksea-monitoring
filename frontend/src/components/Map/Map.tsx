@@ -16,17 +16,20 @@ let DefaultIcon = L.icon({
 
 L.Marker.prototype.options.icon = DefaultIcon;
 
+import ClassificationOverlay from './ClassificationOverlay';
+
 interface MapProps {
     regions: Region[];
+    selectedSceneUrl?: string;
 }
 
-export default function AppMap({ regions }: MapProps) {
+export default function AppMap({ regions, selectedSceneUrl }: MapProps) {
     // Center of Black Sea approx
-    const center: [number, number] = [43.0, 31.0];
+    const center: [number, number] = [43.0, 27.9]; // Adjusted to Bulgarian coast
 
     return (
         <div className="h-full w-full rounded-lg overflow-hidden border">
-            <MapContainer center={center} zoom={7} scrollWheelZoom={true} className="h-full w-full">
+            <MapContainer center={center} zoom={9} scrollWheelZoom={true} className="h-full w-full">
                 <LayersControl position="topright">
                     <LayersControl.BaseLayer checked name="OpenStreetMap">
                         <TileLayer
@@ -42,6 +45,10 @@ export default function AppMap({ regions }: MapProps) {
                     </LayersControl.BaseLayer>
                 </LayersControl>
 
+                {selectedSceneUrl && (
+                    <ClassificationOverlay url={selectedSceneUrl} />
+                )}
+
                 {regions.map((region) => (
                     <Polygon
                         key={region.id}
@@ -49,8 +56,20 @@ export default function AppMap({ regions }: MapProps) {
                         positions={region.geometry.coordinates[0].map(coord => [coord[1], coord[0]] as [number, number])} // GeoJSON is [lng, lat], Leaflet is [lat, lng]
                     >
                         <Popup>
-                            <strong>{region.name}</strong> <br />
-                            Type: {region.type}
+                            <div className="p-1">
+                                <h3 className="font-bold text-sm">{region.name}</h3>
+                                <p className="text-xs text-muted-foreground uppercase mt-1">Type: {region.type}</p>
+                                <div className="mt-2 pt-2 border-t flex flex-col gap-1">
+                                    <div className="flex justify-between text-xs">
+                                        <span>Vegetation:</span>
+                                        <span className="font-medium text-green-600">1,240m²</span>
+                                    </div>
+                                    <div className="flex justify-between text-xs">
+                                        <span>Confidence:</span>
+                                        <span className="font-medium">92%</span>
+                                    </div>
+                                </div>
+                            </div>
                         </Popup>
                     </Polygon>
                 ))}

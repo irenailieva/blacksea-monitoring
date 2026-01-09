@@ -1,3 +1,7 @@
+---
+trigger: always_on
+---
+
 # Project Specification: Black Sea Aquatic Monitoring System
 
 ## 1. Role & Objective

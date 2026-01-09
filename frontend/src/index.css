@@ -1,1 +1,16 @@
 @import "tailwindcss";
+
+@theme {
+  --color-aquatic-deep: #0f172a;
+  --color-aquatic-surface: #1e293b;
+  --color-aquatic-clear: #38bdf8;
+  --color-aquatic-ocean: #0ea5e9;
+  --color-aquatic-algae: #22c55e;
+  --color-aquatic-sand: #eab308;
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-white/10 backdrop-blur-md border border-white/20 shadow-xl;
+  }
+}

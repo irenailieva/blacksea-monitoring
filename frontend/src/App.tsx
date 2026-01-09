@@ -6,6 +6,8 @@ import Register from './pages/Register';
 import Layout from '@/components/Layout';
 import Dashboard from './pages/Dashboard';
 import Analysis from './pages/Analysis';
+import DataUpload from './pages/DataUpload';
+import TeamManagement from './pages/TeamManagement';
 import './App.css';
 
 // Simple Protected Route wrapper
@@ -27,6 +29,7 @@ function RequireAuth({ children }: RequireAuthProps) {
 
   return <>{children}</>;
 }
+
 
 function App() {
   const { checkAuth } = useAuth();
@@ -52,16 +55,8 @@ function App() {
         >
           <Route index element={<Dashboard />} />
           <Route path="analysis" element={<Analysis />} />
-          <Route path="data" element={
-            <div className="flex items-center justify-center h-full border-2 border-dashed border-gray-300 rounded-lg p-12 text-center text-gray-500">
-              <h3 className="text-lg font-medium">Data Component Placeholder</h3>
-            </div>
-          } />
-          <Route path="admin" element={
-            <div className="flex items-center justify-center h-full border-2 border-dashed border-gray-300 rounded-lg p-12 text-center text-gray-500">
-              <h3 className="text-lg font-medium">Admin Component Placeholder</h3>
-            </div>
-          } />
+          <Route path="data" element={<DataUpload />} />
+          <Route path="admin" element={<TeamManagement />} />
         </Route>
       </Routes>
     </BrowserRouter>
