@@ -109,6 +109,23 @@ def train():
     
     print(f"✅ Models saved to {ARTIFACTS_DIR}")
 
+    # --- Voting Classifier Evaluation (Soft Voting) ---
+    print("\nEvaluating Voting Classifier (Soft Voting)...")
+    
+    # Get probabilities from each model
+    prob1 = rf.predict_proba(X_test)
+    prob2 = xgb_model.predict_proba(X_test)
+    prob3 = lgb_model.predict_proba(X_test)
+    
+    # Average probabilities
+    avg_prob = (prob1 + prob2 + prob3) / 3.0
+    
+    # Take class with highest accumulated probability
+    y_pred_ensemble = np.argmax(avg_prob, axis=1)
+    
+    ensemble_acc = accuracy_score(y_test, y_pred_ensemble)
+    print(f"🏆 Soft Voting Ensemble Accuracy: {ensemble_acc:.4f}")
+
     # --- Visualization ---
     import matplotlib.pyplot as plt
     import seaborn as sns
@@ -117,9 +134,8 @@ def train():
 
     print("Generating visualizations...")
 
-    # 1. Confusion Matrix (using LightGBM as best performer)
-    y_pred = lgb_model.predict(X_test)
-    cm = confusion_matrix(y_test, y_pred)
+    # 1. Confusion Matrix (Ensemble)
+    cm = confusion_matrix(y_test, y_pred_ensemble)
     
     plt.figure(figsize=(10, 8))
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
@@ -127,12 +143,12 @@ def train():
                 yticklabels=class_names)
     plt.xlabel('Predicted')
     plt.ylabel('Actual')
-    plt.title('Confusion Matrix (LightGBM)')
+    plt.title('Confusion Matrix (Voting Ensemble)')
     plt.savefig(ARTIFACTS_DIR / "confusion_matrix.png")
     plt.close()
-    print(f"✅ Confusion Matrix saved to {ARTIFACTS_DIR / 'confusion_matrix.png'}")
+    print(f"✅ Confusion Matrix (Ensemble) saved to {ARTIFACTS_DIR / 'confusion_matrix.png'}")
 
-    # 2. SHAP Values
+    # 2. SHAP Values (using LightGBM as proxy for feature importance)
     # Use TreeExplainer for LightGBM
     explainer = shap.TreeExplainer(lgb_model)
     shap_values = explainer.shap_values(X_test)

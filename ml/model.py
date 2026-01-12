@@ -17,13 +17,17 @@ class WaterQualityModel:
         return 6 
 
     def _vote(self, X):
-        p1 = self.rf.predict(X)
-        p2 = self.xgb.predict(X)
-        p3 = self.lgb.predict(X)
+        # Soft Voting: Average the probabilities
+        # Shape: (n_samples, n_classes)
+        prob1 = self.rf.predict_proba(X)
+        prob2 = self.xgb.predict_proba(X)
+        prob3 = self.lgb.predict_proba(X)
         
-        votes = np.stack((p1, p2, p3), axis=0)
-        # mode returns (mode_array, count_array)
-        final_pred, _ = stats.mode(votes, axis=0, keepdims=False)
+        # Average probabilities
+        avg_prob = (prob1 + prob2 + prob3) / 3.0
+        
+        # Take class with highest accumulated probability
+        final_pred = np.argmax(avg_prob, axis=1)
         return final_pred
 
     def predict_one(self, x):
