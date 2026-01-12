@@ -54,8 +54,16 @@ def train():
     red = df['band_3'].values.astype(float)
     nir = df['band_4'].values.astype(float)
     
-    # Prepare features with spectral indices: [B2, B3, B4, B8, NDVI, NDWI]
-    X = prepare_features(blue, green, red, nir)
+    # Check if indices are already in dataset (Enriched)
+    if 'ndvi' in df.columns and 'ndwi' in df.columns:
+        print("Using pre-calculated indices from dataset.")
+        ndvi = df['ndvi'].values.astype(float)
+        ndwi = df['ndwi'].values.astype(float)
+        # Re-stack manually
+        X = np.column_stack([blue, green, red, nir, ndvi, ndwi])
+    else:
+        print("Calculating indices on the fly...")
+        X = prepare_features(blue, green, red, nir)
 
     print(f"Training on {len(X)} samples with 6 features: [B2, B3, B4, B8, NDVI, NDWI]...")
     
@@ -96,6 +104,56 @@ def train():
     joblib.dump(lgb_model, ARTIFACTS_DIR / "lgb_model.pkl")
     
     print(f"✅ Models saved to {ARTIFACTS_DIR}")
+
+    # --- Visualization ---
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    from sklearn.metrics import confusion_matrix
+    import shap
+
+    print("Generating visualizations...")
+
+    # 1. Confusion Matrix (using LightGBM as best performer)
+    y_pred = lgb_model.predict(X_test)
+    cm = confusion_matrix(y_test, y_pred)
+    
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
+                xticklabels=['Sand/Water', 'Algae/Rocks', 'Deep Sea'],
+                yticklabels=['Sand/Water', 'Algae/Rocks', 'Deep Sea'])
+    plt.xlabel('Predicted')
+    plt.ylabel('Actual')
+    plt.title('Confusion Matrix (LightGBM)')
+    plt.savefig(ARTIFACTS_DIR / "confusion_matrix.png")
+    plt.close()
+    print(f"✅ Confusion Matrix saved to {ARTIFACTS_DIR / 'confusion_matrix.png'}")
+
+    # 2. SHAP Values
+    # Use TreeExplainer for LightGBM
+    explainer = shap.TreeExplainer(lgb_model)
+    shap_values = explainer.shap_values(X_test)
+    
+    # Summary Plot (Bar Chart for Simplicity)
+    plt.figure()
+    
+    # Feature names: B2, B3, B4, B8, NDVI, NDWI
+    feature_names = ['Blue', 'Green', 'Red', 'NIR', 'NDVI', 'NDWI']
+    
+    # Check if shap_values is list (multiclass) or array (binary)
+    if isinstance(shap_values, list):
+        # Taking class 1 (Vegetation/Algae) for explanation
+        # Summing absolute SHAP values for global importance
+        vals = shap_values[1]
+    else:
+        vals = shap_values
+
+    # Plot bar chart of feature importance
+    shap.summary_plot(vals, X_test, feature_names=feature_names, plot_type="bar", show=False)
+    plt.title("Feature Importance (SHAP) - Class: Vegetation")
+    plt.tight_layout()
+    plt.savefig(ARTIFACTS_DIR / "shap_summary.png")
+    plt.close()
+    print(f"✅ SHAP summary saved to {ARTIFACTS_DIR / 'shap_summary.png'}")
 
 if __name__ == "__main__":
     train()

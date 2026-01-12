@@ -11,3 +11,5 @@ pandas
 shap
 rasterio
 opencv-python-headless
+matplotlib
+seaborn
