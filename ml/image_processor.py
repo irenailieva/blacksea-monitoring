@@ -54,8 +54,7 @@ def process_scene(band_paths: dict, output_path: str, model):
         driver='GTiff',
         dtype=rasterio.uint8, 
         count=1, 
-        nodata=255,      
-        compress='lzw'
+        nodata=255
     )
 
     # 3. Process Blocks
