@@ -69,6 +69,9 @@ def train():
     
     # Split data
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=RANDOM_SEED, stratify=y)
+    
+    # Update Class Names for Plots
+    class_names = ['Non-vegetated', 'Vegetation', 'Deep Sea'] # 0, 1, 2
 
     # 1. Random Forest
     print("Training Random Forest...")
@@ -79,6 +82,7 @@ def train():
 
     # 2. XGBoost
     print("Training XGBoost...")
+    # Multiclass
     xgb_model = xgb.XGBClassifier(
         n_estimators=50, max_depth=6, objective='multi:softmax', num_class=3,
         tree_method="hist", n_jobs=-1, random_state=RANDOM_SEED
@@ -119,8 +123,8 @@ def train():
     
     plt.figure(figsize=(10, 8))
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
-                xticklabels=['Sand/Water', 'Algae/Rocks', 'Deep Sea'],
-                yticklabels=['Sand/Water', 'Algae/Rocks', 'Deep Sea'])
+                xticklabels=class_names,
+                yticklabels=class_names)
     plt.xlabel('Predicted')
     plt.ylabel('Actual')
     plt.title('Confusion Matrix (LightGBM)')
