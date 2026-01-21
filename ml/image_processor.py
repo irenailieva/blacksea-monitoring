@@ -77,8 +77,8 @@ def process_scene(band_paths: dict, output_path: str, model):
             scl_chunk = scl_full[row_start:row_end, col_start:col_end]
             cloud_chunk = dilated_cloud_mask[row_start:row_end, col_start:col_end]
             
-            # Target Mask: Water (SCL=6) AND Not Cloud
-            target_mask = (scl_chunk == 6) & (cloud_chunk == 0)
+            # Target Mask: Not Cloud (Let model decide on Water/Land/Veg)
+            target_mask = (cloud_chunk == 0)
             
             if not target_mask.any():
                 empty_block = np.full((window.height, window.width), 255, dtype=rasterio.uint8)

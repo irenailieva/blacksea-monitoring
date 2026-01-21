@@ -1,6 +1,7 @@
 import rasterio
 from rasterio.windows import from_bounds
 from rasterio.warp import transform_bounds
+from rasterio.enums import Resampling
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -15,112 +16,89 @@ B2_PATH = BASE_DIR / "T35TNH_20230606T085559_B02_10m.jp2"
 B3_PATH = BASE_DIR / "T35TNH_20230606T085559_B03_10m.jp2"
 B4_PATH = BASE_DIR / "T35TNH_20230606T085559_B04_10m.jp2"
 B8_PATH = BASE_DIR / "T35TNH_20230606T085559_B08_10m.jp2"
+SCL_PATH = BASE_DIR / "T35TNH_20230606T085559_SCL_20m.jp2"
 
 # ROI: Lake Vaya Bounding Box (WGS84 Lat/Lon)
-# (West, South, East, North)
 MEAN_ROI_WGS84 = (27.3319, 42.4727, 27.4932, 42.5235)
 
+import time
+
 def extract_data():
-    print("--- Starting Lake Vaya Data Extraction ---")
+    start_time = time.time()
+    print(f"[{time.time()-start_time:.1f}s] --- Starting Lake Vaya Data Extraction (Force-Learning) ---")
     
     # 1. Determine Window
     window = None
     
     with rasterio.open(B2_PATH) as src:
-        print(f"Source CRS: {src.crs}")
-        
-        # Transform coordinates from WGS84 (4326) to the Image's CRS
-        print(f"Transforming ROI {MEAN_ROI_WGS84} to Image CRS...")
-        left, bottom, right, top = transform_bounds(
-            "EPSG:4326", 
-            src.crs, 
-            *MEAN_ROI_WGS84
-        )
-        print(f"Projected Bounds: ({left:.2f}, {bottom:.2f}, {right:.2f}, {top:.2f})")
-        
-        # Create the window for reading
+        print(f"[{time.time()-start_time:.1f}s] Source CRS: {src.crs}")
+        # Transform coordinates
+        left, bottom, right, top = transform_bounds("EPSG:4326", src.crs, *MEAN_ROI_WGS84)
         window = from_bounds(left, bottom, right, top, transform=src.transform)
-        print(f"Read Window: {window}")
+        print(f"[{time.time()-start_time:.1f}s] Read Window: {window}")
 
     # 2. Read Bands (Windowed)
-    print("Reading Bands...")
+    print(f"[{time.time()-start_time:.1f}s] Reading Bands (including SCL)...")
     with rasterio.open(B2_PATH) as src_b2, \
          rasterio.open(B3_PATH) as src_b3, \
          rasterio.open(B4_PATH) as src_b4, \
-         rasterio.open(B8_PATH) as src_b8:
+         rasterio.open(B8_PATH) as src_b8, \
+         rasterio.open(SCL_PATH) as src_scl:
          
         b2 = src_b2.read(1, window=window).astype(float)
+        print(f"[{time.time()-start_time:.1f}s] B2 Read. Shape: {b2.shape}")
+        
         b3 = src_b3.read(1, window=window).astype(float)
         b4 = src_b4.read(1, window=window).astype(float)
         b8 = src_b8.read(1, window=window).astype(float)
+        
+        # SCL needs upscaling to match 10m window
+        scl_window = from_bounds(left, bottom, right, top, transform=src_scl.transform)
+        print(f"[{time.time()-start_time:.1f}s] Reading SCL. Window: {scl_window}")
+        
+        scl_raw = src_scl.read(
+            1, 
+            window=scl_window,
+            out_shape=(b2.shape[0], b2.shape[1]), # Force shape match
+            resampling=Resampling.nearest
+        )
+        print(f"[{time.time()-start_time:.1f}s] SCL Read. Shape: {scl_raw.shape}")
 
     # 3. Calculate Indices
-    print("Calculating Indices...")
+    print(f"[{time.time()-start_time:.1f}s] Calculating Indices...")
     np.seterr(divide='ignore', invalid='ignore')
     
-    # NDVI = (NIR - Red) / (NIR + Red)
+    # NDVI
     denom_ndvi = b8 + b4
     ndvi = np.where(denom_ndvi != 0, (b8 - b4) / denom_ndvi, -1.0)
     
-    # NDWI = (Green - NIR) / (Green + NIR)
+    # NDWI
     denom_ndwi = b3 + b8
     ndwi = np.where(denom_ndwi != 0, (b3 - b8) / denom_ndwi, -1.0)
     
-    # 4. Apply Classification Rules (Active Learning)
+    # 4. Apply Force-Learning Rules
     print(" Applying Rules...")
-    
-    # Masks
-    # C1 (Veg/Algae): (NDVI > 0.05) AND (Green > Red)
-    mask_c1 = (ndvi > 0.05) & (b3 > b4)
-    
-    # C0 (Abiotic): (NDVI < 0.15) AND (Red >= Green)
-    mask_c0 = (ndvi < 0.15) & (b4 >= b3)
-    
-    # C2 (Deep Water): NDVI <= 0.0
-    # Note: C2 takes precedence or we handle intersection?
-    # Usually Deep Water satisfies NDVI <= 0.
-    # If a pixel matches C2 (NDVI<=0) and C0 (<0.15, R>=G), it's ambiguous.
-    # But Deep water usually has Green > Red (if clear). If Red >= Green + Low NDVI, likely Turbid/Abiotic.
-    # So we enforce:
-    # C2 Strict: NDVI <= 0.0 AND Green > Red ?? User rule was just "NDVI <= 0.0".
-    # User Rules:
-    # 1. C1: NDVI > 0.05 AND G > R
-    # 2. C0: NDVI < 0.15 AND R >= G
-    # 3. C2: NDVI <= 0.0
-    # Process C2 first to capture "Deep Water", or treat C0/C1 as specific overrides?
-    # "Class 2 (Deep Water): Goal: Clean, deep water."
-    # Let's enforce the "Green > Red" implicitly for Clean Water or explicitly exclude C0.
-    # Actually, if we follow user rules literally:
-    # Pixel A: NDVI -0.1, G 1000, R 800 (Green > Red).
-    #   C1: False.
-    #   C0: False (R < G).
-    #   C2: True (-0.1 <= 0). -> Class 2 (Correct).
-    # Pixel B: NDVI -0.1, G 800, R 1000 (Red > Green, Turbid).
-    #   C1: False.
-    #   C0: True (NDVI < 0.15, R >= G).
-    #   C2: True (NDVI <= 0).
-    #   Result: It fits both Abiotic and Deep Water rules.
-    #   "Class 0... Capture sand, rocks... and turbid sediment water".
-    #   So Pixel B should be Class 0.
-    #   Therefore, C0 MUST take precedence over C2 if they overlap.
-    
-    # Refined Logic Step:
-    # Initialize labels with -1
     labels = np.full(ndvi.shape, -1, dtype=int)
     
-    # Apply C2 (Base Water)
+    # TARGET: Class 2 (Deep Water) -> NDVI <= 0.0
+    # Constraint: Water usually has SCL=6, but user logic focuses on NDVI.
+    # We apply this first as a base layer for water areas.
     labels[ndvi <= 0.0] = 2
     
-    # Apply C0 (Abiotic / Turbid) - This overwrites C2 if "Red >= Green"
-    labels[(ndvi < 0.15) & (b4 >= b3)] = 0
+    # TARGET: Class 0 (Land/Abiotic) -> NDVI < 0.1 AND SCL == 5 (Non-vegetated)
+    # This captures the "Red > Green" shores without explicit spectral check (relying on SCL).
+    labels[(ndvi < 0.1) & (scl_raw == 5)] = 0
     
-    # Apply C1 (Veg) - High confidence
-    labels[(ndvi > 0.05) & (b3 > b4)] = 1
+    # TARGET: Class 1 (Phytoplankton/Bloom) -> NDVI > 0.01 (Inside ROI)
+    # "Force" this over others. 
+    # If NDVI > 0.01, it's ALGAE (even if SCL thinks it's water or abiotic).
+    # Overwrite previous labels.
+    labels[ndvi > 0.01] = 1
     
     # 5. Sampling
     new_samples = []
     classes = [0, 1, 2]
-    SAMPLES_PER_CLASS = 500
+    SAMPLES_PER_CLASS = 1000  # Updated to 1000
     
     print(" Sampling...")
     for c in classes:
@@ -142,9 +120,9 @@ def extract_data():
             new_samples.append({
                 'class_id': c,
                 'band_1': int(b2[y, x]),
-                'band_2': int(b3[y, x]), # Green
-                'band_3': int(b4[y, x]), # Red
-                'band_4': int(b8[y, x]), # NIR
+                'band_2': int(b3[y, x]),
+                'band_3': int(b4[y, x]),
+                'band_4': int(b8[y, x]),
                 'ndvi': round(float(ndvi[y, x]), 4),
                 'ndwi': round(float(ndwi[y, x]), 4)
             })
