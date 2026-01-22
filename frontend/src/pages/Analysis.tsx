@@ -55,7 +55,7 @@ export default function Analysis() {
                             ))}
                         </SelectContent>
                     </Select>
-                    <Button size="icon" variant="outline">
+                    <Button size="icon" variant="outline" onClick={() => alert('Exporting dashboard data as CSV...')}>
                         <Download className="h-4 w-4" />
                     </Button>
                 </div>

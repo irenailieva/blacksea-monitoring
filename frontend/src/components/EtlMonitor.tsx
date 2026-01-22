@@ -7,7 +7,7 @@ import api from '@/api/axios';
 interface JobStatus {
     id: number;
     job_type: string;
-    status: 'pending' | 'running' | 'completed' | 'failed';
+    status: 'pending' | 'running' | 'processing' | 'completed' | 'failed';
     payload?: any;
     started_at?: string;
     finished_at?: string;
@@ -72,12 +72,12 @@ export function EtlMonitor() {
                         <Badge variant={
                             job.status === 'completed' ? 'default' :
                                 job.status === 'failed' ? 'destructive' :
-                                    job.status === 'running' ? 'secondary' : 'outline'
+                                    (job.status === 'running' || job.status === 'processing') ? 'secondary' : 'outline'
                         } className="text-[10px] uppercase">
                             {job.status}
                         </Badge>
                     </div>
-                    {job.status === 'running' && (
+                    {(job.status === 'running' || job.status === 'processing') && (
                         <div className="space-y-1">
                             <Progress value={job.payload?.progress || 0} className="h-1" />
                             <div className="flex justify-end">
@@ -88,7 +88,7 @@ export function EtlMonitor() {
                     <div className="flex items-center gap-2">
                         {job.status === 'completed' && <CheckCircle2 className="h-3 w-3 text-green-500" />}
                         {job.status === 'failed' && <AlertCircle className="h-3 w-3 text-destructive" />}
-                        {job.status === 'running' && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
+                        {(job.status === 'running' || job.status === 'processing') && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
                         {job.status === 'pending' && <Clock className="h-3 w-3 text-muted-foreground" />}
                         <span className="text-[10px] capitalize text-muted-foreground">{job.status}</span>
                     </div>

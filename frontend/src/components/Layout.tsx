@@ -1,5 +1,6 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import useAuth from '../store/useAuth';
+import { useNotifications } from '@/store/useNotifications';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Archive, LayoutDashboard, Map, Menu, User, Bell, Users, LucideIcon } from 'lucide-react';
@@ -22,6 +23,7 @@ interface NavigationItem {
 
 export default function Layout() {
     const { user, logout } = useAuth();
+    const { notifications, unreadCount, markAsRead } = useNotifications();
     const location = useLocation();
 
     const navigation: NavigationItem[] = [
@@ -91,10 +93,50 @@ export default function Layout() {
                     <div className="ml-auto flex-1 sm:flex-initial">
                         <span className="text-sm text-gray-500 mr-4">Team: Demo Team</span>
                     </div>
-                    <Button variant="ghost" size="icon" className="relative">
-                        <Bell className="h-5 w-5" />
-                        <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-red-600"></span>
-                    </Button>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="relative">
+                                <Bell className="h-5 w-5" />
+                                {unreadCount > 0 && (
+                                    <span className="absolute top-2 right-2 flex h-2 w-2">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
+                                    </span>
+                                )}
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-80">
+                            <DropdownMenuLabel>Notifications ({unreadCount})</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <div className="max-h-80 overflow-y-auto">
+                                {notifications.length === 0 ? (
+                                    <div className="p-4 text-center text-xs text-muted-foreground">No notifications</div>
+                                ) : (
+                                    <div className="p-2 flex flex-col gap-1">
+                                        {notifications.map((n) => (
+                                            <div
+                                                key={n.id}
+                                                className={`p-2 rounded-md hover:bg-muted cursor-pointer transition-colors ${n.read ? 'opacity-60' : ''}`}
+                                                onClick={() => markAsRead(n.id)}
+                                            >
+                                                <div className="flex items-center justify-between mb-1">
+                                                    <span className={`text-[11px] font-bold ${n.type === 'alert' ? 'text-red-500' : 'text-primary'}`}>
+                                                        {n.title}
+                                                    </span>
+                                                    <span className="text-[9px] text-muted-foreground">
+                                                        {new Date(n.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    </span>
+                                                </div>
+                                                <p className="text-[10px] text-muted-foreground leading-tight">
+                                                    {n.message}
+                                                </p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="secondary" size="icon" className="rounded-full">

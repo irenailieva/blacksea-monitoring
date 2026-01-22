@@ -12,6 +12,7 @@ from app.routes import scenes as scenes_router
 from app.routes import index_types as index_types_router
 from app.routes import index_values as index_values_router
 from app.routes import teams as teams_router
+from app.routes import analysis as analysis_router
 
 from app.core.database import Base, engine
 

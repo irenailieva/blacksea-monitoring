@@ -1,8 +1,10 @@
-"""
-API routes за Scene ресурс.
-"""
+import shutil
+import httpx
+import os
+from datetime import datetime
+from pathlib import Path
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, BackgroundTasks
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -11,6 +13,28 @@ from app.models.user import User
 from app import schemas
 from app.crud import scene as crud_scene
 from app.crud import etl_job as crud_etl_job
+
+ML_BASE_URL = os.getenv("ML_BASE_URL", "http://ml:8500")
+
+async def trigger_ml_inference(job_id: int, scene_id: int, file_path: str):
+    """Вика ML услугата за обработка на сцената."""
+    try:
+        payload = {
+            "b2": file_path,
+            "b3": file_path,
+            "b4": file_path,
+            "b8": file_path,
+            "scl": file_path,
+            "output_path": f"/app/ml/data/classified_{scene_id}.tif"
+        }
+        
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            r = await client.post(f"{ML_BASE_URL}/process_scene", json=payload)
+            r.raise_for_status()
+            
+        print(f"ML Processing triggered successfully for scene {scene_id}")
+    except Exception as e:
+        print(f"Failed to trigger ML processing: {e}")
 
 router = APIRouter(prefix="/scenes", tags=["scenes"])
 
@@ -103,3 +127,40 @@ def get_etl_status(
         return crud_etl_job.etl_job.get_recent_jobs(db, limit=5)
     return jobs
 
+@router.post("/upload", response_model=schemas.SceneRead)
+async def upload_scene_file(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_any_role("researcher", "admin"))
+):
+    """Качва нов GeoTIFF и създава запис за сцена със статус 'pending'."""
+    # Ensure the directory exists
+    upload_dir = Path("/app/ml/data/uploads")
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    
+    file_path = upload_dir / file.filename
+    with file_path.open("wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    
+    # Create scene record
+    scene_in = schemas.SceneCreate(
+        sentinel_id=file.filename.split('.')[0],
+        acquired_at=datetime.utcnow().isoformat(),
+        cloud_coverage=0.0,
+        etl_status="processing"
+    )
+    db_scene = crud_scene.create(db=db, obj_in=scene_in)
+    
+    # Create an ETL job record
+    job_in = schemas.ETLJobCreate(
+        job_type="manual_upload",
+        status="processing",
+        payload={"scene_id": db_scene.id, "file_path": str(file_path)}
+    )
+    db_job = crud_etl_job.etl_job.create(db=db, obj_in=job_in)
+    
+    # Trigger inference in background
+    background_tasks.add_task(trigger_ml_inference, db_job.id, db_scene.id, str(file_path))
+    
+    return db_scene

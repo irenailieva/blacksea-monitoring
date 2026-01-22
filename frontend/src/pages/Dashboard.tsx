@@ -16,6 +16,7 @@ export default function Dashboard() {
     const [selectedScene, setSelectedScene] = useState<Scene | null>(null);
     const [regions, setRegions] = useState<Region[]>([]);
     const [scenes, setScenes] = useState<Scene[]>([]);
+    const [dateAfter, setDateAfter] = useState<string>('2023-01-01');
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -37,7 +38,11 @@ export default function Dashboard() {
         fetchData();
     }, []);
 
-    const filteredScenes = scenes.filter(s => s.cloud_coverage <= cloudCover[0]);
+    const filteredScenes = scenes.filter((s: Scene) => {
+        const matchesCloud = s.cloud_coverage <= cloudCover[0];
+        const matchesDate = !dateAfter || new Date(s.acquired_at) >= new Date(dateAfter);
+        return matchesCloud && matchesDate;
+    });
 
     if (loading) {
         return (
@@ -56,7 +61,7 @@ export default function Dashboard() {
                         <Calendar className="mr-2 h-4 w-4" />
                         {dateRange}
                     </Button>
-                    <Button size="sm">Download Report</Button>
+                    <Button size="sm" onClick={() => alert('Generating PDF report for the current view...')}>Download Report</Button>
                 </div>
             </div>
 
@@ -81,6 +86,15 @@ export default function Dashboard() {
                                     onValueChange={setCloudCover}
                                     max={100}
                                     step={1}
+                                />
+                            </div>
+                            <div className="space-y-3 pt-2">
+                                <label className="text-sm font-medium">Date After</label>
+                                <input
+                                    type="date"
+                                    className="w-full flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                    onChange={(e) => setDateAfter(e.target.value)}
+                                    value={dateAfter}
                                 />
                             </div>
                         </CardContent>

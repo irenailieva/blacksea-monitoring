@@ -1,88 +1,57 @@
+import { useEffect, useState } from 'react';
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid, Legend } from "recharts"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Loader2 } from 'lucide-react';
+import api from '@/api/axios';
 
 // Mock data
-const data = [
-    {
-        date: "2024-01",
-        vegetation: 2400,
-        sand: 1398,
-    },
-    {
-        date: "2024-02",
-        vegetation: 2210,
-        sand: 1500,
-    },
-    {
-        date: "2024-03",
-        vegetation: 2290,
-        sand: 1450,
-    },
-    {
-        date: "2024-04",
-        vegetation: 2500,
-        sand: 1300,
-    },
-    {
-        date: "2024-05",
-        vegetation: 2800,
-        sand: 1100,
-    },
-    {
-        date: "2024-06",
-        vegetation: 3100,
-        sand: 900,
-    },
-    {
-        date: "2024-07",
-        vegetation: 3400,
-        sand: 850,
-    },
-]
 
-interface VegetationChartProps {
-    regionId?: string;
-}
-
-interface ShapExplanationProps {
-    regionId?: string;
-}
-
-export function ShapExplanation({ regionId }: ShapExplanationProps) {
-    // In a real app, use regionId to fetch SHAP values
-    console.log('Fetching SHAP values for region:', regionId);
-    return (
-        <Card className="col-span-1 lg:col-span-2">
-            <CardHeader>
-                <CardTitle>SHAP Explanation</CardTitle>
-                <CardDescription>
-                    Feature importance for predictions
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="pb-4">
-                <div className="h-[300px] flex items-center justify-center text-gray-500">
-                    SHAP explanation chart will go here.
-                </div>
-            </CardContent>
-        </Card>
-    );
+interface TrendData {
+    date: string;
+    vegetation: number;
+    sand: number;
 }
 
 export function VegetationChart({ regionId }: VegetationChartProps) {
-    // In a real app, use regionId to fetch specific data
-    console.log('Fetching vegetation data for region:', regionId);
+    const [trendData, setTrendData] = useState<TrendData[]>([]);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (!regionId) return;
+
+        const fetchTrends = async () => {
+            setLoading(true);
+            try {
+                const response = await api.get<TrendData[]>('/analysis/vegetation-trend', {
+                    params: { region_id: regionId }
+                });
+                setTrendData(response.data);
+            } catch (error) {
+                console.error('Failed to fetch vegetation trends:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchTrends();
+    }, [regionId]);
+
     return (
         <Card className="col-span-1 lg:col-span-2">
             <CardHeader>
-                <CardTitle>Vegetation Trends</CardTitle>
-                <CardDescription>
-                    Area coverage (m²) over time
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <CardTitle>Vegetation Trends</CardTitle>
+                        <CardDescription>
+                            Area coverage (m²) over time
+                        </CardDescription>
+                    </div>
+                    {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                </div>
             </CardHeader>
             <CardContent className="pb-4">
                 <div className="h-[300px]">
                     <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={data} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
+                        <LineChart data={trendData.length > 0 ? trendData : []} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
                             <XAxis
                                 dataKey="date"

@@ -14,10 +14,10 @@ class CRUDETLJob(CRUDBase[ETLJob]):
     """CRUD операции за ETLJob."""
     
     def get_active_jobs(self, db: Session) -> List[ETLJob]:
-        """Връща всички активни (pending или running) задачи."""
+        """Връща всички активни (pending, running или processing) задачи."""
         return (
             db.query(ETLJob)
-            .filter(ETLJob.status.in_(["pending", "running"]))
+            .filter(ETLJob.status.in_(["pending", "running", "processing"]))
             .order_by(ETLJob.started_at.desc())
             .all()
         )

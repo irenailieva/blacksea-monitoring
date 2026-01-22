@@ -30,7 +30,7 @@ export default function DataUpload() {
 
         try {
             // Placeholder endpoint - in a real app this would match the FastAPI backend
-            await api.post('/data/upload', formData, {
+            await api.post('/scenes/upload', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                 },
@@ -60,27 +60,43 @@ export default function DataUpload() {
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <div className="grid w-full items-center gap-1.5">
-                            <Label htmlFor="data-file">Select File</Label>
-                            <Input
-                                id="data-file"
-                                type="file"
-                                accept=".tif,.tiff,.csv,.geojson,.json"
-                                onChange={handleFileChange}
-                                disabled={uploading}
-                            />
-                            <p className="text-xs text-muted-foreground">
-                                Supported formats: GeoTIFF (.tif), CSV, GeoJSON
-                            </p>
+                        <div className="grid w-full items-center gap-1.5 focus-within:ring-2 focus-within:ring-primary/20 rounded-lg p-1 transition-all">
+                            <Label htmlFor="data-file" className="px-1 text-xs font-semibold uppercase text-muted-foreground tracking-wider">Select Source File</Label>
+                            <label
+                                htmlFor="data-file"
+                                className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-muted/30 hover:bg-muted/50 border-muted-foreground/25 hover:border-primary/50 transition-all"
+                            >
+                                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                    <Upload className="w-8 h-8 mb-3 text-muted-foreground/60" />
+                                    <p className="mb-2 text-sm text-muted-foreground text-center px-4">
+                                        <span className="font-semibold">Click to upload</span> or drag and drop
+                                    </p>
+                                    <p className="text-xs text-muted-foreground/60">
+                                        GeoTIFF, Drone Tiles, or GPS CSV (MAX. 500MB)
+                                    </p>
+                                </div>
+                                <Input
+                                    id="data-file"
+                                    type="file"
+                                    className="hidden"
+                                    accept=".tif,.tiff,.csv,.geojson,.json"
+                                    onChange={handleFileChange}
+                                    disabled={uploading}
+                                />
+                            </label>
                         </div>
 
                         {file && (
-                            <div className="flex items-center gap-2 p-2 bg-muted rounded-md border">
-                                <FileType className="h-4 w-4 text-primary" />
-                                <span className="text-sm truncate flex-1">{file.name}</span>
-                                <span className="text-xs text-muted-foreground">
-                                    {(file.size / (1024 * 1024)).toFixed(2)} MB
-                                </span>
+                            <div className="flex items-center gap-3 p-3 bg-primary/5 rounded-lg border border-primary/20 animate-in fade-in slide-in-from-top-1">
+                                <div className="bg-primary/10 p-2 rounded-md">
+                                    <FileType className="h-5 w-5 text-primary" />
+                                </div>
+                                <div className="flex flex-col overflow-hidden">
+                                    <span className="text-sm font-medium truncate">{file.name}</span>
+                                    <span className="text-xs text-muted-foreground">
+                                        {(file.size / (1024 * 1024)).toFixed(2)} MB
+                                    </span>
+                                </div>
                             </div>
                         )}
 
