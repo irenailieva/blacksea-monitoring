@@ -24,7 +24,7 @@ const useAuth = create<AuthState>((set) => ({
             const data = Object.fromEntries(formData.entries());
             await api.post('/auth/login', { ...data, set_cookie: true });
 
-            const userResponse = await api.get<User>('/users/me');
+            const userResponse = await api.get<User>('/auth/me');
             set({ user: userResponse.data, isLoading: false });
         } catch (err) {
             console.error('Login failed', err);
@@ -68,7 +68,7 @@ const useAuth = create<AuthState>((set) => ({
     checkAuth: async () => {
         set({ isLoading: true });
         try {
-            const response = await api.get<User>('/users/me');
+            const response = await api.get<User>('/auth/me');
             set({ user: response.data, isLoading: false });
         } catch (err) {
             set({ user: null, isLoading: false });
