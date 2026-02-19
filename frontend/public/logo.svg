@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="200mm"
+   height="200mm"
+   viewBox="0 0 200 200"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.4.2 (f4327f4, 2025-05-13)"
+   sodipodi:docname="LOGO.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     inkscape:zoom="0.26299501"
+     inkscape:cx="-365.02593"
+     inkscape:cy="819.40717"
+     inkscape:window-width="1920"
+     inkscape:window-height="1094"
+     inkscape:window-x="-11"
+     inkscape:window-y="-11"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs1">
+    <linearGradient
+       id="linearGradient5"
+       inkscape:collect="always">
+      <stop
+         style="stop-color:#2a7ecd;stop-opacity:1;"
+         offset="0"
+         id="stop5" />
+      <stop
+         style="stop-color:#5fbf84;stop-opacity:1;"
+         offset="1"
+         id="stop6" />
+    </linearGradient>
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient5"
+       id="linearGradient11"
+       gradientUnits="userSpaceOnUse"
+       x1="52.641918"
+       y1="88.210777"
+       x2="145.83234"
+       y2="88.210777" />
+  </defs>
+  <g
+     inkscape:label="Слой 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <g
+       id="g11"
+       transform="matrix(2.1461433,0,0,2.1461433,-112.9771,-89.312969)">
+      <circle
+         style="fill:url(#linearGradient11);fill-opacity:0.91994;stroke:#ffffff;stroke-width:0;stroke-linejoin:bevel;stroke-miterlimit:0"
+         id="path1"
+         cx="99.237129"
+         cy="88.210777"
+         r="46.595211" />
+      <circle
+         style="fill:none;stroke:#ffffff;stroke-width:3;stroke-linejoin:bevel;stroke-miterlimit:0;stroke-dasharray:none"
+         id="path2"
+         cx="99.237129"
+         cy="88.210777"
+         r="16.501869" />
+    </g>
+  </g>
+</svg>

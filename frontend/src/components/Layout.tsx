@@ -44,7 +44,7 @@ export default function Layout() {
                         to="/"
                         className="flex items-center gap-2 text-lg font-semibold md:text-base"
                     >
-                        <Map className="h-6 w-6" />
+                        <img src="/logo.svg" alt="Black Sea Monitor" className="h-8 w-auto" />
                         <span className="sr-only">Black Sea Monitor</span>
                     </Link>
                     {filteredNav.map((item) => (
@@ -75,7 +75,7 @@ export default function Layout() {
                                 to="/"
                                 className="flex items-center gap-2 text-lg font-semibold"
                             >
-                                <Map className="h-6 w-6" />
+                                <img src="/logo.svg" alt="Black Sea Monitor" className="h-8 w-auto" />
                                 <span className="sr-only">Black Sea Monitor</span>
                             </Link>
                             {filteredNav.map((item) => (
