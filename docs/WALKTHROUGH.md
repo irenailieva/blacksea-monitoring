@@ -34,6 +34,7 @@ Connected frontend charts to real backend data.
 - [x] GeoTIFF upload triggering ETL jobs.
 - [x] Dashboard regions filtering for charts.
 - [x] Notification dismissal and unread tracking.
+- [x] Settings Page Implementation: User profile and app preferences page active at `/settings`.
 
 ## Final Docker Verification Results
 
@@ -48,7 +49,7 @@ The system has been successfully containerized using `docker-compose`.
 - [x] **Branding Integration**: Verified custom `logo.svg` and updated browser title/favicon.
 
 > [!NOTE]
-> **Internal Test Tool Note**: Automated browser screenshots were substituted with programmatic API flow verification due to environment-level tool limitations. All data paths (Auth -> Region -> Trends) are confirmed operational.
+> **Test Tool Limitation**: Automated browser testing is unavailable because the agent environment lacks the `$HOME` variable required to launch the headless browser driver (Playwright). Verification was instead performed via direct API calls and container health checks.
 
 ### Key Deployment Notes
 - **Seeding**: The database was initialized inside the `backend` container using `seed_user.py` and `seed_data.py`.
