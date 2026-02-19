@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard';
 import Analysis from './pages/Analysis';
 import DataUpload from './pages/DataUpload';
 import TeamManagement from './pages/TeamManagement';
+import Settings from './pages/Settings';
 import './App.css';
 
 // Simple Protected Route wrapper
@@ -57,6 +58,7 @@ function App() {
           <Route path="analysis" element={<Analysis />} />
           <Route path="data" element={<DataUpload />} />
           <Route path="admin" element={<TeamManagement />} />
+          <Route path="settings" element={<Settings />} />
         </Route>
       </Routes>
     </BrowserRouter>
