@@ -164,3 +164,27 @@ async def upload_scene_file(
     background_tasks.add_task(trigger_ml_inference, db_job.id, db_scene.id, str(file_path))
     
     return db_scene
+
+@router.post("/etl-trigger", response_model=schemas.ETLJobRead)
+async def trigger_automated_etl(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_any_role("researcher", "admin"))
+):
+    """Triggers the automated Sentinel-2 ETL pipeline."""
+    job_in = schemas.ETLJobCreate(
+        job_type="sentinel_auto_pipeline",
+        status="pending",
+        payload={"progress": 0}
+    )
+    db_job = crud_etl_job.etl_job.create(db=db, obj_in=job_in)
+    
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post("http://etl:8001/trigger", json={"job_id": db_job.id})
+            resp.raise_for_status()
+    except Exception as e:
+        status_update = schemas.ETLJobUpdate(status="failed")
+        db_job = crud_etl_job.etl_job.update(db, db_obj=db_job, obj_in=status_update)
+        raise HTTPException(status_code=500, detail=f"Failed to trigger ETL pipeline: {e}")
+    
+    return db_job

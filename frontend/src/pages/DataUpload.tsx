@@ -49,6 +49,20 @@ export default function DataUpload() {
         <div className="container mx-auto py-6 space-y-6">
             <div className="flex items-center justify-between">
                 <h2 className="text-3xl font-bold tracking-tight">Data Upload</h2>
+                <Button 
+                    variant="secondary"
+                    onClick={async () => {
+                        try {
+                            await api.post('/scenes/etl-trigger');
+                            setStatus({ type: 'success', message: 'Automated ETL triggered successfully!'});
+                        } catch(e) {
+                            setStatus({ type: 'error', message: 'Failed to trigger ETL.'});
+                        }
+                    }}
+                >
+                    <Activity className="mr-2 h-4 w-4 text-primary" /> 
+                    Trigger Sentinel-2 Fetch
+                </Button>
             </div>
 
             <div className="grid gap-6 md:grid-cols-2">

@@ -66,6 +66,12 @@ Transform raw data into actionable insights using advanced visualization tools.
   - `Completed`: Data ready for visualization.
   - `Failed`: Error log available for admins.
 
+### Automated Data Fetching
+- **Trigger Sentinel-2 Pipeline**: Analysts and Admins can manually trigger the automated Sentinel-2 satellite data pipeline to fetch new imagery from space agencies.
+- Navigate to the **Data Upload** page and click the **"Trigger Sentinel-2 Fetch"** button next to the page title. 
+- The system will start a background ETL job to download, preprocess, calculate indices (like NDVI), and run ML inference on the newest imagery.
+- You can watch the real-time progress (e.g., 5%, 30%, 70%, 100%) in the Processing Monitor below it.
+
 ---
 
 ## 5. Notifications & Alerts

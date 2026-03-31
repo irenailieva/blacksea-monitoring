@@ -16,8 +16,21 @@ load_dotenv(env_path)
 # Add project root to sys.path to allow importing backend
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from backend.app.models import Base
+
+def update_job_status(engine, job_id, status, progress=None):
+    if not job_id:
+        return
+    try:
+        with engine.begin() as conn:
+            prog_str = f", payload = jsonb_set(COALESCE(payload, '{{}}'::jsonb), '{{progress}}', '{progress}') " if progress is not None else ""
+            finish_str = ", finished_at = NOW() " if status in ('completed', 'failed') else ""
+            stmt = f"UPDATE etl_jobs SET status = :status {prog_str} {finish_str} WHERE id = :job_id"
+            conn.execute(text(stmt), {"status": status, "job_id": job_id})
+    except Exception as e:
+        logger.error(f"Failed to update job status: {e}")
+
 
 
 def load_config():
@@ -29,7 +42,7 @@ def load_config():
     with open(config_path, "r") as f:
         return yaml.safe_load(f)
 
-def run_pipeline():
+def run_pipeline(job_id=None):
     logger.info("Starting ETL pipeline")
     
     config = load_config()
@@ -59,6 +72,8 @@ def run_pipeline():
     team_role.create(bind=engine, checkfirst=True)
     
     Base.metadata.create_all(engine)
+    
+    update_job_status(engine, job_id, 'processing', 5)
 
     try:
         # 1. Download
@@ -72,16 +87,24 @@ def run_pipeline():
         raw_file = download_result["composite"]
         ml_bands = download_result["ml_bands"]
         
+        update_job_status(engine, job_id, 'processing', 30)
+        
         # 2. Preprocess
         processed_file = preprocess_raster(raw_file)
         
+        update_job_status(engine, job_id, 'processing', 50)
+        
         # 3. Generate Index (NDVI)
         ndvi_file = generate_index(processed_file, index_name='NDVI')
+        
+        update_job_status(engine, job_id, 'processing', 70)
         
         # 4. Upload Metadata
         upload_to_db(raw_file, db_url, config['aoi'])
         upload_to_db(processed_file, db_url, config['aoi'])
         upload_to_db(ndvi_file, db_url, config['aoi'])
+        
+        update_job_status(engine, job_id, 'processing', 90)
         
         # 5. ML Inference
         logger.info("Triggering ML Inference...")
@@ -126,9 +149,11 @@ def run_pipeline():
             logger.error(f"Failed to contact ML service: {e}")
         
         logger.success("ETL Pipeline completed successfully!")
+        update_job_status(engine, job_id, 'completed', 100)
         
     except Exception as e:
         logger.exception(f"ETL Pipeline failed: {e}")
+        update_job_status(engine, job_id, 'failed')
         raise
 
 if __name__ == "__main__":

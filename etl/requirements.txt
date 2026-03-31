@@ -29,4 +29,5 @@ pystac-client
 odc-stac
 
 pytest
-
+fastapi>=0.111.0
+uvicorn>=0.30.0
