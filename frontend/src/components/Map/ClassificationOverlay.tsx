@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useMap } from 'react-leaflet';
-import L from 'leaflet';
+
 import 'georaster-layer-for-leaflet';
 // @ts-ignore
 import parseGeoraster from 'georaster';

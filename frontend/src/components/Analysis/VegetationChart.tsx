@@ -12,6 +12,10 @@ interface TrendData {
     sand: number;
 }
 
+interface VegetationChartProps {
+    regionId?: number | null;
+}
+
 export function VegetationChart({ regionId }: VegetationChartProps) {
     const [trendData, setTrendData] = useState<TrendData[]>([]);
     const [loading, setLoading] = useState(false);

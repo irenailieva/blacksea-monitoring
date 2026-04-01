@@ -92,7 +92,7 @@ export default function Analysis() {
             </div>
 
             <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-3">
-                <VegetationChart regionId={selectedRegion} />
+                <VegetationChart regionId={selectedRegion ? Number(selectedRegion) : null} />
                 <ShapExplanation regionId={selectedRegion} />
             </div>
 

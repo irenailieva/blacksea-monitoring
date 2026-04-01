@@ -3,7 +3,7 @@ import useAuth from '../store/useAuth';
 import { useNotifications } from '@/store/useNotifications';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Archive, LayoutDashboard, Map, Menu, User, Bell, Users, LucideIcon } from 'lucide-react';
+import { Archive, LayoutDashboard, Map, Menu, Bell, Users, LucideIcon } from 'lucide-react';
 import {
     DropdownMenu,
     DropdownMenuContent,

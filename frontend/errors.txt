@@ -1,0 +1,48 @@
+src/components/Analysis/VegetationChart.tsx(15,47): error TS2304: Cannot find name 'VegetationChartProps'.
+src/components/Layout.tsx(6,47): error TS6133: 'User' is declared but its value is never read.
+src/components/Layout.tsx(72,22): error TS2322: Type '{ children: Element; side: string; }' is not assignable to type 'IntrinsicAttributes & RefAttributes<unknown>'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & RefAttributes<unknown>'.
+src/components/Layout.tsx(144,34): error TS2559: Type '{ children: Element[]; }' has no properties in common with type 'IntrinsicAttributes & RefAttributes<unknown>'.
+src/components/Layout.tsx(145,50): error TS2322: Type '{ src: string; }' is not assignable to type 'IntrinsicAttributes & RefAttributes<unknown>'.
+  Property 'src' does not exist on type 'IntrinsicAttributes & RefAttributes<unknown>'.
+src/components/Layout.tsx(146,38): error TS2559: Type '{ children: string; }' has no properties in common with type 'IntrinsicAttributes & RefAttributes<unknown>'.
+src/components/Map/ClassificationOverlay.tsx(3,1): error TS6133: 'L' is declared but its value is never read.
+src/components/ui/avatar.tsx(8,36): error TS2339: Property 'className' does not exist on type '{}'.
+src/components/ui/avatar.tsx(10,5): error TS2322: Type 'ForwardedRef<unknown>' is not assignable to type 'Ref<HTMLSpanElement> | undefined'.
+  Type 'RefObject<unknown>' is not assignable to type 'Ref<HTMLSpanElement> | undefined'.
+    Type 'RefObject<unknown>' is not assignable to type 'RefObject<HTMLSpanElement | null>'.
+      Type 'unknown' is not assignable to type 'HTMLSpanElement | null'.
+src/components/ui/avatar.tsx(16,41): error TS2339: Property 'className' does not exist on type '{}'.
+src/components/ui/avatar.tsx(18,5): error TS2322: Type 'ForwardedRef<unknown>' is not assignable to type 'Ref<HTMLImageElement> | undefined'.
+  Type 'RefObject<unknown>' is not assignable to type 'Ref<HTMLImageElement> | undefined'.
+    Type 'RefObject<unknown>' is not assignable to type 'RefObject<HTMLImageElement | null>'.
+      Type 'unknown' is not assignable to type 'HTMLImageElement | null'.
+src/components/ui/avatar.tsx(24,44): error TS2339: Property 'className' does not exist on type '{}'.
+src/components/ui/avatar.tsx(26,5): error TS2322: Type 'ForwardedRef<unknown>' is not assignable to type 'Ref<HTMLSpanElement> | undefined'.
+  Type 'RefObject<unknown>' is not assignable to type 'Ref<HTMLSpanElement> | undefined'.
+    Type 'RefObject<unknown>' is not assignable to type 'RefObject<HTMLSpanElement | null>'.
+      Type 'unknown' is not assignable to type 'HTMLSpanElement | null'.
+src/components/ui/sheet.tsx(16,42): error TS2339: Property 'className' does not exist on type '{}'.
+src/components/ui/sheet.tsx(23,5): error TS2322: Type 'ForwardedRef<unknown>' is not assignable to type 'Ref<HTMLDivElement> | undefined'.
+  Type 'RefObject<unknown>' is not assignable to type 'Ref<HTMLDivElement> | undefined'.
+    Type 'RefObject<unknown>' is not assignable to type 'RefObject<HTMLDivElement | null>'.
+      Type 'unknown' is not assignable to type 'HTMLDivElement | null'.
+src/components/ui/sheet.tsx(46,42): error TS2339: Property 'side' does not exist on type '{}'.
+src/components/ui/sheet.tsx(46,58): error TS2339: Property 'className' does not exist on type '{}'.
+src/components/ui/sheet.tsx(46,69): error TS2339: Property 'children' does not exist on type '{}'.
+src/components/ui/sheet.tsx(51,31): error TS2322: Type 'ForwardedRef<unknown>' is not assignable to type 'Ref<HTMLDivElement> | undefined'.
+  Type 'RefObject<unknown>' is not assignable to type 'Ref<HTMLDivElement> | undefined'.
+    Type 'RefObject<unknown>' is not assignable to type 'RefObject<HTMLDivElement | null>'.
+      Type 'unknown' is not assignable to type 'HTMLDivElement | null'.
+src/components/ui/sheet.tsx(65,3): error TS7031: Binding element 'className' implicitly has an 'any' type.
+src/components/ui/sheet.tsx(75,3): error TS7031: Binding element 'className' implicitly has an 'any' type.
+src/components/ui/sheet.tsx(84,40): error TS2339: Property 'className' does not exist on type '{}'.
+src/components/ui/sheet.tsx(86,5): error TS2322: Type 'ForwardedRef<unknown>' is not assignable to type 'Ref<HTMLHeadingElement> | undefined'.
+  Type 'RefObject<unknown>' is not assignable to type 'Ref<HTMLHeadingElement> | undefined'.
+    Type 'RefObject<unknown>' is not assignable to type 'RefObject<HTMLHeadingElement | null>'.
+      Type 'unknown' is not assignable to type 'HTMLHeadingElement | null'.
+src/components/ui/sheet.tsx(92,46): error TS2339: Property 'className' does not exist on type '{}'.
+src/components/ui/sheet.tsx(94,5): error TS2322: Type 'ForwardedRef<unknown>' is not assignable to type 'Ref<HTMLParagraphElement> | undefined'.
+  Type 'RefObject<unknown>' is not assignable to type 'Ref<HTMLParagraphElement> | undefined'.
+    Type 'RefObject<unknown>' is not assignable to type 'RefObject<HTMLParagraphElement | null>'.
+      Type 'unknown' is not assignable to type 'HTMLParagraphElement | null'.
