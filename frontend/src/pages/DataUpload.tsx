@@ -30,10 +30,13 @@ export default function DataUpload() {
                 const formData = new FormData();
                 formData.append('file', file);
                 
-                return api.post('/scenes/upload', formData, {
-                    headers: {
-                        'Content-Type': 'multipart/form-data',
-                    },
+                return fetch('http://localhost:8000/scenes/upload', {
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'include' // Must include HttpOnly cookies for JWT authentication
+                }).then(res => {
+                    if (!res.ok) throw new Error('Upload HTTP Error');
+                    return res;
                 });
             }));
             

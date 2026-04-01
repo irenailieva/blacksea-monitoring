@@ -63,6 +63,20 @@ def read_scenes(
     return crud_scene.get_multi(db=db, skip=skip, limit=limit)
 
 
+@router.get("/etl-status", response_model=List[schemas.ETLJobRead])
+def get_etl_status(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Връща статуса на активните ETL задачи."""
+    # За демо цели, ако няма нищо в базата, връщаме малко мок данни
+    jobs = crud_etl_job.etl_job.get_active_jobs(db)
+    if not jobs:
+        # Return empty list or some mock for demo if needed
+        # But for now, let's return whatever is in the DB
+        return crud_etl_job.etl_job.get_recent_jobs(db, limit=5)
+    return jobs
+
 @router.get("/{scene_id}", response_model=schemas.SceneRead)
 def read_scene(
     scene_id: int,
@@ -112,20 +126,6 @@ def delete_scene(
     crud_scene.delete(db=db, id=scene_id)
     return None
 
-
-@router.get("/etl-status", response_model=List[schemas.ETLJobRead])
-def get_etl_status(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """Връща статуса на активните ETL задачи."""
-    # За демо цели, ако няма нищо в базата, връщаме малко мок данни
-    jobs = crud_etl_job.etl_job.get_active_jobs(db)
-    if not jobs:
-        # Return empty list or some mock for demo if needed
-        # But for now, let's return whatever is in the DB
-        return crud_etl_job.etl_job.get_recent_jobs(db, limit=5)
-    return jobs
 
 @router.post("/upload", response_model=schemas.SceneRead)
 async def upload_scene_file(
