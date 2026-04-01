@@ -8,38 +8,40 @@ import api from '@/api/axios';
 import { EtlMonitor } from '@/components/EtlMonitor';
 
 export default function DataUpload() {
-    const [file, setFile] = useState<File | null>(null);
+    const [files, setFiles] = useState<File[]>([]);
     const [uploading, setUploading] = useState(false);
     const [status, setStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            setFile(e.target.files[0]);
+        if (e.target.files && e.target.files.length > 0) {
+            setFiles(Array.from(e.target.files));
             setStatus(null);
         }
     };
 
     const handleUpload = async () => {
-        if (!file) return;
+        if (files.length === 0) return;
 
         setUploading(true);
         setStatus(null);
 
-        const formData = new FormData();
-        formData.append('file', file);
-
         try {
-            // Placeholder endpoint - in a real app this would match the FastAPI backend
-            await api.post('/scenes/upload', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
-            });
-            setStatus({ type: 'success', message: 'File uploaded successfully!' });
-            setFile(null);
+            await Promise.all(files.map(async (file) => {
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                return api.post('/scenes/upload', formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                    },
+                });
+            }));
+            
+            setStatus({ type: 'success', message: 'All files uploaded successfully!' });
+            setFiles([]);
         } catch (error) {
             console.error('Upload failed:', error);
-            setStatus({ type: 'error', message: 'Upload failed. Please try again.' });
+            setStatus({ type: 'error', message: 'One or more uploads failed. Please try again.' });
         } finally {
             setUploading(false);
         }
@@ -93,6 +95,7 @@ export default function DataUpload() {
                                     id="data-file"
                                     type="file"
                                     className="hidden"
+                                    multiple
                                     accept=".tif,.tiff,.csv,.geojson,.json"
                                     onChange={handleFileChange}
                                     disabled={uploading}
@@ -100,17 +103,21 @@ export default function DataUpload() {
                             </label>
                         </div>
 
-                        {file && (
-                            <div className="flex items-center gap-3 p-3 bg-primary/5 rounded-lg border border-primary/20 animate-in fade-in slide-in-from-top-1">
-                                <div className="bg-primary/10 p-2 rounded-md">
-                                    <FileType className="h-5 w-5 text-primary" />
-                                </div>
-                                <div className="flex flex-col overflow-hidden">
-                                    <span className="text-sm font-medium truncate">{file.name}</span>
-                                    <span className="text-xs text-muted-foreground">
-                                        {(file.size / (1024 * 1024)).toFixed(2)} MB
-                                    </span>
-                                </div>
+                        {files.length > 0 && (
+                            <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+                                {files.map((file, idx) => (
+                                    <div key={idx} className="flex items-center gap-3 p-3 bg-primary/5 rounded-lg border border-primary/20 animate-in fade-in slide-in-from-top-1">
+                                        <div className="bg-primary/10 p-2 rounded-md">
+                                            <FileType className="h-5 w-5 text-primary" />
+                                        </div>
+                                        <div className="flex flex-col overflow-hidden">
+                                            <span className="text-sm font-medium truncate">{file.name}</span>
+                                            <span className="text-xs text-muted-foreground">
+                                                {(file.size / (1024 * 1024)).toFixed(2)} MB
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         )}
 
@@ -128,7 +135,7 @@ export default function DataUpload() {
 
                         <Button
                             className="w-full"
-                            disabled={!file || uploading}
+                            disabled={files.length === 0 || uploading}
                             onClick={handleUpload}
                         >
                             {uploading ? (
