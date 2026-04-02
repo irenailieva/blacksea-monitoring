@@ -62,6 +62,27 @@
   }
 }
 
+/* Global pointer cursor for all interactive / clickable elements */
+button,
+[role="button"],
+[role="tab"],
+[role="menuitem"],
+[role="option"],
+[role="combobox"],
+select,
+label[for],
+a[href],
+summary,
+[data-radix-collection-item],
+[data-state],
+input[type="checkbox"],
+input[type="radio"],
+input[type="file"],
+input[type="submit"],
+input[type="reset"] {
+  cursor: pointer;
+}
+
 /* Ensure Leaflet is always the baseline */
 .leaflet-container {
   z-index: 0 !important;

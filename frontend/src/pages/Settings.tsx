@@ -33,7 +33,7 @@ export default function Settings() {
                             </CardHeader>
                             <CardContent>
                                 <form>
-                                    <Input placeholder="Store Name" defaultValue={user?.email?.split('@')[0] || "User"} />
+                                    <Input placeholder="Username" defaultValue={user?.username || ""} />
                                 </form>
                             </CardContent>
                             <CardFooter className="border-t px-6 py-4">

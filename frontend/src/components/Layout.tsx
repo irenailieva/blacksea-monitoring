@@ -143,7 +143,7 @@ export default function Layout() {
                             <Button variant="secondary" size="icon" className="rounded-full">
                                 <Avatar>
                                     <AvatarImage src="" />
-                                    <AvatarFallback>{user?.email?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
+                                    <AvatarFallback>{user?.username?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
                                 </Avatar>
                                 <span className="sr-only">Toggle user menu</span>
                             </Button>

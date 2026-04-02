@@ -17,7 +17,7 @@ class RegisterRequest(BaseModel):
     username: str = Field(min_length=3, max_length=50)
     email: EmailStr
     password: str = Field(min_length=6, max_length=128)
-    role: str = Field(default="viewer")  # admin|researcher|viewer
+    role: str = Field(default="analyst")  # admin|analyst|viewer
 
 class LoginRequest(BaseModel):
     """Схема за login request."""

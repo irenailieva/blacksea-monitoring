@@ -14,17 +14,17 @@ from app.crud import region as crud_region
 router = APIRouter(prefix="/regions", tags=["regions"])
 
 
-@router.post("/", response_model=schemas.RegionRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=schemas.RegionRead, status_code=status.HTTP_201_CREATED)
 def create_region(
     region_in: schemas.RegionCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_any_role("researcher", "admin"))
+    current_user: User = Depends(require_any_role("analyst", "admin"))
 ):
     """Създава нов регион. Изисква researcher или admin роля."""
     return crud_region.create(db=db, obj_in=region_in)
 
 
-@router.get("/", response_model=List[schemas.RegionRead])
+@router.get("", response_model=List[schemas.RegionRead])
 def read_regions(
     skip: int = 0,
     limit: int = 100,
@@ -59,7 +59,7 @@ def update_region(
     region_id: int,
     region_in: schemas.RegionUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_any_role("researcher", "admin"))
+    current_user: User = Depends(require_any_role("analyst", "admin"))
 ):
     """Обновява регион. Изисква researcher или admin роля."""
     db_region = crud_region.get(db=db, id=region_id)

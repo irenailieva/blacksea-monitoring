@@ -39,17 +39,17 @@ async def trigger_ml_inference(job_id: int, scene_id: int, file_path: str):
 router = APIRouter(prefix="/scenes", tags=["scenes"])
 
 
-@router.post("/", response_model=schemas.SceneRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=schemas.SceneRead, status_code=status.HTTP_201_CREATED)
 def create_scene(
     scene_in: schemas.SceneCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_any_role("researcher", "admin"))
+    current_user: User = Depends(require_any_role("analyst", "admin"))
 ):
     """Създава нова сцена. Изисква researcher или admin роля."""
     return crud_scene.create(db=db, obj_in=scene_in)
 
 
-@router.get("/", response_model=List[schemas.SceneRead])
+@router.get("", response_model=List[schemas.SceneRead])
 def read_scenes(
     skip: int = 0,
     limit: int = 100,
@@ -98,7 +98,7 @@ def update_scene(
     scene_id: int,
     scene_in: schemas.SceneUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_any_role("researcher", "admin"))
+    current_user: User = Depends(require_any_role("analyst", "admin"))
 ):
     """Обновява сцена. Изисква researcher или admin роля."""
     db_scene = crud_scene.get(db=db, id=scene_id)
@@ -132,7 +132,7 @@ async def upload_scene_file(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_any_role("researcher", "admin"))
+    current_user: User = Depends(require_any_role("analyst", "admin"))
 ):
     """Качва нов GeoTIFF и създава запис за сцена със статус 'pending'."""
     # Ensure the directory exists
@@ -143,22 +143,26 @@ async def upload_scene_file(
     with file_path.open("wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
     
+    from app.models.region import Region
+    region = db.query(Region).first()
+    region_id = region.id if region else 1
+
     # Create scene record
     scene_in = schemas.SceneCreate(
-        sentinel_id=file.filename.split('.')[0],
-        acquired_at=datetime.utcnow().isoformat(),
-        cloud_coverage=0.0,
-        etl_status="processing"
+        scene_id=file.filename.split('.')[0],
+        acquisition_date=datetime.utcnow().date(),
+        cloud_cover=0.0,
+        region_id=region_id
     )
     db_scene = crud_scene.create(db=db, obj_in=scene_in)
     
     # Create an ETL job record
     job_in = schemas.ETLJobCreate(
         job_type="manual_upload",
-        status="processing",
+        status="pending",
         payload={"scene_id": db_scene.id, "file_path": str(file_path)}
     )
-    db_job = crud_etl_job.etl_job.create(db=db, obj_in=job_in)
+    db_job = crud_etl_job.etl_job.create(db=db, obj_in=job_in.model_dump())
     
     # Trigger inference in background
     background_tasks.add_task(trigger_ml_inference, db_job.id, db_scene.id, str(file_path))
@@ -168,7 +172,7 @@ async def upload_scene_file(
 @router.post("/etl-trigger", response_model=schemas.ETLJobRead)
 async def trigger_automated_etl(
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_any_role("researcher", "admin"))
+    current_user: User = Depends(require_any_role("analyst", "admin"))
 ):
     """Triggers the automated Sentinel-2 ETL pipeline."""
     job_in = schemas.ETLJobCreate(
@@ -176,7 +180,7 @@ async def trigger_automated_etl(
         status="pending",
         payload={"progress": 0}
     )
-    db_job = crud_etl_job.etl_job.create(db=db, obj_in=job_in)
+    db_job = crud_etl_job.etl_job.create(db=db, obj_in=job_in.model_dump())
     
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:

@@ -3,7 +3,8 @@
  */
 export interface User {
     id: number;
-    email: string;
+    username: string;
+    email?: string;
     role: 'viewer' | 'analyst' | 'admin';
     preferences?: {
         default_region_id: number;
