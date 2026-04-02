@@ -83,7 +83,7 @@ class CRUDBase(Generic[ModelType]):
         db: Session,
         *,
         db_obj: ModelType,
-        obj_in: dict,
+        obj_in,
         commit: bool = True
     ) -> ModelType:
         """
@@ -102,8 +102,15 @@ class CRUDBase(Generic[ModelType]):
             HTTPException: При constraint violation или друга DB грешка
         """
         try:
-            # Обновяваме само непразните стойности
-            update_data = {k: v for k, v in obj_in.items() if v is not None}
+            # Accept both Pydantic models and plain dicts
+            if hasattr(obj_in, 'model_dump'):
+                raw = obj_in.model_dump(exclude_unset=True)
+            elif hasattr(obj_in, 'dict'):
+                raw = obj_in.dict(exclude_unset=True)
+            else:
+                raw = obj_in
+            # Only skip keys whose value is *explicitly* None
+            update_data = {k: v for k, v in raw.items() if v is not None}
             
             for field, value in update_data.items():
                 setattr(db_obj, field, value)

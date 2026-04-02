@@ -17,9 +17,21 @@ from app.crud import etl_job as crud_etl_job
 ML_BASE_URL = os.getenv("ML_BASE_URL", "http://ml:8500")
 
 async def trigger_ml_inference(job_id: int, scene_id: int, file_path: str):
-    """Вика ML услугата за обработка на сцената."""
+    """Calls the ML service and keeps the ETL job status updated throughout."""
+    from app.core.database import SessionLocal
+    db = SessionLocal()
     try:
-        payload = {
+        # Transition to processing
+        db_job = crud_etl_job.etl_job.get(db, id=job_id)
+        if db_job:
+            payload_update = dict(db_job.payload or {})
+            payload_update["progress"] = 10
+            crud_etl_job.etl_job.update(
+                db, db_obj=db_job,
+                obj_in={"status": "processing", "payload": payload_update}
+            )
+
+        ml_payload = {
             "b2": file_path,
             "b3": file_path,
             "b4": file_path,
@@ -27,14 +39,31 @@ async def trigger_ml_inference(job_id: int, scene_id: int, file_path: str):
             "scl": file_path,
             "output_path": f"/app/ml/data/classified_{scene_id}.tif"
         }
-        
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            r = await client.post(f"{ML_BASE_URL}/process_scene", json=payload)
+
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            r = await client.post(f"{ML_BASE_URL}/process_scene", json=ml_payload)
             r.raise_for_status()
-            
-        print(f"ML Processing triggered successfully for scene {scene_id}")
+
+        print(f"ML Processing completed successfully for scene {scene_id}")
+        db_job = crud_etl_job.etl_job.get(db, id=job_id)
+        if db_job:
+            payload_done = dict(db_job.payload or {})
+            payload_done["progress"] = 100
+            crud_etl_job.etl_job.update(
+                db, db_obj=db_job,
+                obj_in={"status": "completed", "payload": payload_done,
+                        "finished_at": datetime.utcnow()}
+            )
     except Exception as e:
         print(f"Failed to trigger ML processing: {e}")
+        db_job = crud_etl_job.etl_job.get(db, id=job_id)
+        if db_job:
+            crud_etl_job.etl_job.update(
+                db, db_obj=db_job,
+                obj_in={"status": "failed", "finished_at": datetime.utcnow()}
+            )
+    finally:
+        db.close()
 
 router = APIRouter(prefix="/scenes", tags=["scenes"])
 
@@ -68,14 +97,9 @@ def get_etl_status(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Връща статуса на активните ETL задачи."""
-    # За демо цели, ако няма нищо в базата, връщаме малко мок данни
-    jobs = crud_etl_job.etl_job.get_active_jobs(db)
-    if not jobs:
-        # Return empty list or some mock for demo if needed
-        # But for now, let's return whatever is in the DB
-        return crud_etl_job.etl_job.get_recent_jobs(db, limit=5)
-    return jobs
+    """Returns the 10 most recent ETL jobs (active + recently finished)."""
+    # Always return recent jobs so UI can reflect transitions from pending → completed/failed
+    return crud_etl_job.etl_job.get_recent_jobs(db, limit=10)
 
 @router.get("/{scene_id}", response_model=schemas.SceneRead)
 def read_scene(
@@ -156,15 +180,15 @@ async def upload_scene_file(
     )
     db_scene = crud_scene.create(db=db, obj_in=scene_in)
     
-    # Create an ETL job record
+    # Create an ETL job record — starts as pending, background task moves it to processing
     job_in = schemas.ETLJobCreate(
         job_type="manual_upload",
         status="pending",
-        payload={"scene_id": db_scene.id, "file_path": str(file_path)}
+        payload={"scene_id": db_scene.id, "file_path": str(file_path), "progress": 0}
     )
     db_job = crud_etl_job.etl_job.create(db=db, obj_in=job_in.model_dump())
-    
-    # Trigger inference in background
+
+    # Trigger inference in background — this updates status as it progresses
     background_tasks.add_task(trigger_ml_inference, db_job.id, db_scene.id, str(file_path))
     
     return db_scene

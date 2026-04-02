@@ -99,13 +99,20 @@ class ProcessSceneRequest(BaseModel):
 def process_scene_endpoint(req: ProcessSceneRequest):
     if not model:
         raise HTTPException(status_code=503, detail="Model not loaded")
-    
+
     band_paths = {
         'b2': req.b2, 'b3': req.b3, 'b4': req.b4, 'b8': req.b8, 'scl': req.scl
     }
-    
+
+    # Ensure output directory exists before rasterio tries to write
+    from pathlib import Path
+    output_dir = Path(req.output_path).parent
+    output_dir.mkdir(parents=True, exist_ok=True)
+
     try:
         process_scene(band_paths, req.output_path, model)
         return {"status": "success", "output_path": req.output_path}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        import traceback
+        detail = f"{type(e).__name__}: {e}\n{traceback.format_exc()}"
+        raise HTTPException(status_code=500, detail=detail)

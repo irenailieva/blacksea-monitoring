@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 import yaml
 import requests
 from dotenv import load_dotenv
@@ -24,12 +25,24 @@ def update_job_status(engine, job_id, status, progress=None):
         return
     try:
         with engine.begin() as conn:
-            prog_str = f", payload = jsonb_set(COALESCE(payload, '{{}}'::jsonb), '{{progress}}', '{progress}') " if progress is not None else ""
+            if progress is not None:
+                # jsonb_set requires a valid JSONB literal — json.dumps() gives us '5' not "'5'"
+                progress_json = json.dumps(progress)
+                prog_str = (
+                    f", payload = jsonb_set(COALESCE(payload, '{{}}'::jsonb), "
+                    f"'{{progress}}', '{progress_json}'::jsonb) "
+                )
+            else:
+                prog_str = ""
             finish_str = ", finished_at = NOW() " if status in ('completed', 'failed') else ""
-            stmt = f"UPDATE etl_jobs SET status = :status {prog_str} {finish_str} WHERE id = :job_id"
+            stmt = (
+                f"UPDATE etl_jobs SET status = :status, updated_at = NOW() "
+                f"{prog_str}{finish_str}WHERE id = :job_id"
+            )
             conn.execute(text(stmt), {"status": status, "job_id": job_id})
+            logger.info(f"Job {job_id} → {status}" + (f" ({progress}%)" if progress is not None else ""))
     except Exception as e:
-        logger.error(f"Failed to update job status: {e}")
+        logger.error(f"Failed to update job status for job {job_id}: {e}")
 
 
 

@@ -268,7 +268,7 @@ class ClassificationResultRead(ClassificationResultBase):
 
 class ETLJobBase(BaseSchema):
     job_type: str = Field(..., max_length=50)
-    status: str = Field(default="pending", pattern="^(pending|running|completed|failed)$")
+    status: str = Field(default="pending", pattern="^(pending|running|processing|completed|failed)$")
     payload: Optional[dict[str, Any]] = None
 
 
@@ -278,7 +278,7 @@ class ETLJobCreate(ETLJobBase):
 
 class ETLJobUpdate(BaseSchema):
     job_type: Optional[str] = Field(None, max_length=50)
-    status: Optional[str] = Field(None, pattern="^(pending|running|completed|failed)$")
+    status: Optional[str] = Field(None, pattern="^(pending|running|processing|completed|failed)$")
     payload: Optional[dict[str, Any]] = None
     finished_at: Optional[datetime] = None
 

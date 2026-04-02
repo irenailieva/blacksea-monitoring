@@ -1,5 +1,7 @@
 import os
 import httpx
+from contextlib import asynccontextmanager
+from datetime import datetime, timedelta
 from fastapi import FastAPI, Body, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -14,14 +16,47 @@ from app.routes import index_values as index_values_router
 from app.routes import teams as teams_router
 from app.routes import analysis as analysis_router
 
-from app.core.database import Base, engine
+from app.core.database import Base, engine, SessionLocal
+from app.models.etl_job import ETLJob
 
 load_dotenv()
 
 ML_BASE_URL = os.getenv("ML_BASE_URL", "http://localhost:8500")
 allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
 
-app = FastAPI(title="BlackSea Monitoring API")
+STALE_THRESHOLD_MINUTES = 10  # jobs stuck longer than this get marked failed
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup: create tables and resolve any stale ETL jobs left over from a crash."""
+    Base.metadata.create_all(bind=engine)
+
+    db = SessionLocal()
+    try:
+        cutoff = datetime.utcnow() - timedelta(minutes=STALE_THRESHOLD_MINUTES)
+        stale = (
+            db.query(ETLJob)
+            .filter(ETLJob.status.in_(["pending", "processing", "running"]))
+            .filter(ETLJob.started_at < cutoff)
+            .all()
+        )
+        if stale:
+            for job in stale:
+                job.status = "failed"
+                job.finished_at = datetime.utcnow()
+                job.updated_at = datetime.utcnow()
+            db.commit()
+            print(f"[Watchdog] Marked {len(stale)} stale job(s) as failed on startup.")
+        else:
+            print("[Watchdog] No stale jobs found.")
+    except Exception as e:
+        print(f"[Watchdog] Error resolving stale jobs: {e}")
+    finally:
+        db.close()
+
+    yield  # application runs here
+
+app = FastAPI(title="BlackSea Monitoring API", lifespan=lifespan)
 
 # Създаване на таблиците (ако още не съществуват)
 Base.metadata.create_all(bind=engine)

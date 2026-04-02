@@ -1,99 +1,192 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Loader2, CheckCircle2, AlertCircle, Clock } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Loader2, CheckCircle2, AlertCircle, Clock, RefreshCw } from 'lucide-react';
 import api from '@/api/axios';
 
 interface JobStatus {
     id: number;
     job_type: string;
     status: 'pending' | 'running' | 'processing' | 'completed' | 'failed';
-    payload?: any;
+    payload?: { progress?: number; sentinel_id?: string; scene_id?: number; [key: string]: any };
     started_at?: string;
     finished_at?: string;
+}
+
+const STATUS_ORDER: Record<string, number> = {
+    processing: 0,
+    running: 0,
+    pending: 1,
+    failed: 2,
+    completed: 3,
+};
+
+function isActive(status: string) {
+    return status === 'pending' || status === 'running' || status === 'processing';
 }
 
 export function EtlMonitor() {
     const [jobs, setJobs] = useState<JobStatus[]>([]);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
 
-    const fetchStatus = async () => {
+    const fetchStatus = useCallback(async (manual = false) => {
+        if (manual) setRefreshing(true);
         try {
-            // In a real scenario, this would be a WebSocket or polling endpoint
             const response = await api.get('/scenes/etl-status');
-            setJobs(response.data);
+            // Sort: active first, then by id descending
+            const sorted = (response.data as JobStatus[]).sort((a, b) => {
+                const orderDiff = (STATUS_ORDER[a.status] ?? 4) - (STATUS_ORDER[b.status] ?? 4);
+                return orderDiff !== 0 ? orderDiff : b.id - a.id;
+            });
+            setJobs(sorted);
         } catch (error) {
             console.error('Failed to fetch ETL status:', error);
-            // Fallback to some mock data if endpoint is not yet ready
-            /* 
-            setJobs([
-               { id: 1, sentinel_id: 'S2A_MSIL2A_20230715', status: 'processing', progress: 45, started_at: '2023-11-20T10:00:00Z' },
-               { id: 2, sentinel_id: 'S2B_MSIL2A_20230720', status: 'pending', progress: 0, started_at: '2023-11-20T10:05:00Z' }
-           ]);
-           */
         } finally {
             setLoading(false);
+            setRefreshing(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
         fetchStatus();
-        const interval = setInterval(fetchStatus, 5000);
+        const interval = setInterval(() => fetchStatus(), 5000);
         return () => clearInterval(interval);
-    }, []);
+    }, [fetchStatus]);
 
-    if (loading && jobs.length === 0) {
-        return (
-            <div className="flex items-center justify-center p-8">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-        );
-    }
-
-    if (jobs.length === 0) {
-        return (
-            <div className="p-4 text-center text-sm text-muted-foreground">
-                No active processing jobs.
-            </div>
-        );
-    }
+    const hasActiveJobs = jobs.some(j => isActive(j.status));
 
     return (
-        <div className="space-y-4">
-            {jobs.map((job) => (
-                <div key={job.id} className="space-y-2 border-b last:border-0 pb-4 last:pb-0">
-                    <div className="flex items-center justify-between">
-                        <div className="flex flex-col">
-                            <span className="text-xs font-mono font-bold">
-                                {job.payload?.sentinel_id || job.job_type}
-                            </span>
-                            <span className="text-[10px] text-muted-foreground">Started: {job.started_at ? new Date(job.started_at).toLocaleString() : 'N/A'}</span>
-                        </div>
-                        <Badge variant={
-                            job.status === 'completed' ? 'default' :
-                                job.status === 'failed' ? 'destructive' :
-                                    (job.status === 'running' || job.status === 'processing') ? 'secondary' : 'outline'
-                        } className="text-[10px] uppercase">
-                            {job.status}
-                        </Badge>
-                    </div>
-                    {(job.status === 'running' || job.status === 'processing') && (
-                        <div className="space-y-1">
-                            <Progress value={job.payload?.progress || 0} className="h-1" />
-                            <div className="flex justify-end">
-                                <span className="text-[10px] text-muted-foreground">{job.payload?.progress || 0}%</span>
-                            </div>
-                        </div>
-                    )}
-                    <div className="flex items-center gap-2">
-                        {job.status === 'completed' && <CheckCircle2 className="h-3 w-3 text-green-500" />}
-                        {job.status === 'failed' && <AlertCircle className="h-3 w-3 text-destructive" />}
-                        {(job.status === 'running' || job.status === 'processing') && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
-                        {job.status === 'pending' && <Clock className="h-3 w-3 text-muted-foreground" />}
-                        <span className="text-[10px] capitalize text-muted-foreground">{job.status}</span>
-                    </div>
+        <div className="space-y-3">
+            {/* Header row */}
+            <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">
+                    {hasActiveJobs
+                        ? `${jobs.filter(j => isActive(j.status)).length} job(s) in progress…`
+                        : 'No active jobs'}
+                </span>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => fetchStatus(true)}
+                    disabled={refreshing}
+                    title="Refresh"
+                >
+                    <RefreshCw className={`h-3 w-3 ${refreshing ? 'animate-spin' : ''}`} />
+                </Button>
+            </div>
+
+            {loading && jobs.length === 0 ? (
+                <div className="flex items-center justify-center p-6">
+                    <Loader2 className="h-7 w-7 animate-spin text-primary" />
                 </div>
-            ))}
+            ) : jobs.length === 0 ? (
+                <div className="p-4 text-center text-sm text-muted-foreground">
+                    No ETL jobs found.
+                </div>
+            ) : (
+                jobs.map((job) => {
+                    const progress = job.payload?.progress ?? 0;
+                    const label = job.payload?.sentinel_id ?? job.job_type.replace(/_/g, ' ');
+                    const active = isActive(job.status);
+
+                    return (
+                        <div
+                            key={job.id}
+                            className={`space-y-2 rounded-md border px-3 py-2 ${
+                                job.status === 'failed'
+                                    ? 'border-destructive/30 bg-destructive/5'
+                                    : job.status === 'completed'
+                                    ? 'border-green-500/30 bg-green-500/5'
+                                    : active
+                                    ? 'border-primary/30 bg-primary/5'
+                                    : ''
+                            }`}
+                        >
+                            <div className="flex items-center justify-between">
+                                <div className="flex flex-col gap-0.5 min-w-0">
+                                    <span className="text-xs font-mono font-semibold truncate capitalize">
+                                        {label}
+                                    </span>
+                                    <span className="text-[10px] text-muted-foreground">
+                                        #{job.id} · Started:{' '}
+                                        {job.started_at
+                                            ? new Date(job.started_at).toLocaleTimeString()
+                                            : 'N/A'}
+                                        {job.finished_at && (
+                                            <>
+                                                {' '}→ Finished:{' '}
+                                                {new Date(job.finished_at).toLocaleTimeString()}
+                                            </>
+                                        )}
+                                    </span>
+                                </div>
+                                <Badge
+                                    variant={
+                                        job.status === 'completed'
+                                            ? 'default'
+                                            : job.status === 'failed'
+                                            ? 'destructive'
+                                            : active
+                                            ? 'secondary'
+                                            : 'outline'
+                                    }
+                                    className="text-[10px] uppercase ml-2 shrink-0"
+                                >
+                                    {job.status}
+                                </Badge>
+                            </div>
+
+                            {/* Progress bar for active or pending jobs */}
+                            {(active || job.status === 'completed') && (
+                                <div className="space-y-1">
+                                    <Progress
+                                        value={job.status === 'completed' ? 100 : progress}
+                                        className="h-1.5"
+                                    />
+                                    <div className="flex justify-between items-center">
+                                        <div className="flex items-center gap-1">
+                                            {job.status === 'completed' && (
+                                                <CheckCircle2 className="h-3 w-3 text-green-500" />
+                                            )}
+                                            {job.status === 'failed' && (
+                                                <AlertCircle className="h-3 w-3 text-destructive" />
+                                            )}
+                                            {(job.status === 'running' ||
+                                                job.status === 'processing') && (
+                                                <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                                            )}
+                                            {job.status === 'pending' && (
+                                                <Clock className="h-3 w-3 text-yellow-500 animate-pulse" />
+                                            )}
+                                            <span className="text-[10px] capitalize text-muted-foreground">
+                                                {job.status === 'pending'
+                                                    ? 'Queued — waiting to start'
+                                                    : job.status}
+                                            </span>
+                                        </div>
+                                        <span className="text-[10px] text-muted-foreground">
+                                            {job.status === 'completed' ? 100 : progress}%
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Failed: show icon without progress bar */}
+                            {job.status === 'failed' && (
+                                <div className="flex items-center gap-1">
+                                    <AlertCircle className="h-3 w-3 text-destructive" />
+                                    <span className="text-[10px] text-destructive">
+                                        Pipeline failed — check logs
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+                    );
+                })
+            )}
         </div>
     );
 }
