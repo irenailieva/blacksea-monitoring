@@ -16,21 +16,27 @@ export default function Dashboard() {
     const [selectedScene, setSelectedScene] = useState<Scene | null>(null);
     const [regions, setRegions] = useState<Region[]>([]);
     const [scenes, setScenes] = useState<Scene[]>([]);
-    const [dateAfter, setDateAfter] = useState<string>('2023-01-01');
+    const [dateAfter, setDateAfter] = useState<string>('');
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
             try {
+                console.log('Fetching from /scenes...');
                 const [regionsRes, scenesRes] = await Promise.all([
                     api.get<Region[]>('/regions?with_geometry=true'),
                     api.get<Scene[]>('/scenes')
                 ]);
+                console.log('Fetched scenes:', scenesRes.data.length);
                 setRegions(regionsRes.data);
                 setScenes(scenesRes.data);
-            } catch (error) {
+            } catch (error: any) {
                 console.error('Failed to fetch data:', error);
+                if (error.response) {
+                    console.error('Response data:', error.response.data);
+                    console.error('Response status:', error.response.status);
+                }
             } finally {
                 setLoading(false);
             }
@@ -39,8 +45,8 @@ export default function Dashboard() {
     }, []);
 
     const filteredScenes = scenes.filter((s: Scene) => {
-        const matchesCloud = s.cloud_coverage <= cloudCover[0];
-        const matchesDate = !dateAfter || new Date(s.acquired_at) >= new Date(dateAfter);
+        const matchesCloud = (s.cloud_cover ?? 0) <= cloudCover[0];
+        const matchesDate = !dateAfter || new Date(s.acquisition_date) >= new Date(dateAfter);
         return matchesCloud && matchesDate;
     });
 
@@ -104,14 +110,16 @@ export default function Dashboard() {
                         <CardHeader className="pb-3">
                             <CardTitle className="text-lg flex items-center gap-2">
                                 <ImageIcon className="h-4 w-4" />
-                                Available Scenes
+                                Available Scenes ({scenes.length})
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="p-0">
-                            <div className="flex flex-col">
+                            <div className="flex flex-col max-h-[400px] overflow-y-auto">
                                 {filteredScenes.length === 0 ? (
                                     <div className="p-4 text-xs text-muted-foreground text-center">
-                                        No scenes match the filter.
+                                        {scenes.length > 0 ? (
+                                            'No scenes match the filter.'
+                                        ) : 'No scenes available.'}
                                     </div>
                                 ) : (
                                     filteredScenes.map(scene => (
@@ -122,11 +130,15 @@ export default function Dashboard() {
                                                 }`}
                                         >
                                             <div className="flex flex-col gap-1">
-                                                <span className="text-xs font-mono font-bold truncate">{scene.sentinel_id}</span>
+                                                <span className="text-xs font-mono font-bold truncate">{scene.scene_id}</span>
                                                 <div className="flex items-center justify-between">
-                                                    <span className="text-[10px] text-muted-foreground">{new Date(scene.acquired_at).toLocaleDateString()}</span>
+                                                    <span className="text-[10px] text-muted-foreground">
+                                                        {scene.acquisition_date}
+                                                    </span>
                                                     <Badge variant="outline" className="text-[9px] h-4">
-                                                        {scene.cloud_coverage}% cloud
+                                                        {scene.cloud_cover !== null && scene.cloud_cover !== undefined
+                                                            ? `${scene.cloud_cover.toFixed(1)}% cloud`
+                                                            : 'Manual'}
                                                     </Badge>
                                                 </div>
                                             </div>
@@ -136,6 +148,7 @@ export default function Dashboard() {
                             </div>
                         </CardContent>
                     </Card>
+
 
                     <Card>
                         <CardHeader className="pb-3">
@@ -153,7 +166,7 @@ export default function Dashboard() {
                         <CardContent className="p-0 h-full">
                             <AppMap
                                 regions={regions}
-                                selectedSceneUrl={selectedScene ? `${import.meta.env.VITE_API_URL}/data/inference/${selectedScene.sentinel_id}_classification.tif` : undefined}
+                                selectedSceneUrl={selectedScene ? `${import.meta.env.VITE_API_URL}/data/inference/${selectedScene.scene_id}_classification.tif` : undefined}
                             />
                         </CardContent>
                     </Card>

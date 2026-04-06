@@ -53,7 +53,18 @@ def prepare_features(blue: np.ndarray, green: np.ndarray, red: np.ndarray, nir: 
     Returns:
         Feature matrix with shape (n_samples, 6)
     """
-    ndvi = calculate_ndvi(nir, red)
-    ndwi = calculate_ndwi(green, nir)
+    # 🌡️ Auto-Intake Calibration
+    # Sentinel-2 Raw (L2A) is 0-10,000. Pre-scaled analysis products are 0.0-1.0.
+    # We detect the range to avoid 'double-normalizing' pre-scaled data.
+    data_max = np.nanmax(blue)
+    scale_factor = 10000.0 if data_max > 2.0 else 1.0
     
-    return np.column_stack([blue, green, red, nir, ndvi, ndwi])
+    b2_norm = blue / scale_factor
+    b3_norm = green / scale_factor
+    b4_norm = red / scale_factor
+    b8_norm = nir / scale_factor
+
+    ndvi = calculate_ndvi(b8_norm, b4_norm)
+    ndwi = calculate_ndwi(b3_norm, b8_norm)
+    
+    return np.column_stack([b2_norm, b3_norm, b4_norm, b8_norm, ndvi, ndwi])

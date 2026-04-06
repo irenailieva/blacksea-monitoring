@@ -52,6 +52,7 @@ services:
     volumes:
       - ./backend:/app
       - ./ml:/app/ml
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
 
   ml:
     build:
@@ -61,6 +62,7 @@ services:
       - "8500:8500"
     volumes:
       - ./ml:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8500
 
   frontend:
     build:

@@ -148,7 +148,7 @@ class CRUDRegion(CRUDBase[Region]):
                 "id": region.id,
                 "name": region.name,
                 "description": region.description,
-                "area_km2": region.area_km2,
+                "area_km2": region.area_km2 if region.area_km2 and region.area_km2 > 0 else 1.0,
                 "type": region.type,
                 "geometry": geojson,
                 "created_at": region.created_at,

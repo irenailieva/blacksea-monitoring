@@ -64,7 +64,7 @@ Base.metadata.create_all(bind=engine)
 #Allows front-end requests
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins, #Vite dev server address
+    allow_origins=["*"], # Allow all for debugging
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -93,12 +93,12 @@ app.add_middleware(
 # Let's use a robust path.
 # Mount ML data directory as static files
 # Docker maps host ./ml to /app/ml
-ML_DATA_DIR = "/app/ml"
+ML_DATA_DIR = "/app/ml/data"
 if os.path.exists(ML_DATA_DIR):
     app.mount("/data", StaticFiles(directory=ML_DATA_DIR), name="data")
-    print(f"Mounted {ML_DATA_DIR} to /data")
+    print(f"✅ Mounted {ML_DATA_DIR} to /data")
 else:
-    print(f"WARNING: ML data directory not found at {ML_DATA_DIR}. Static files will not be served.")
+    print(f"⚠️ Warning: {ML_DATA_DIR} does not exist. /data mount failed.")
 
 ############## 
 # Initial Test

@@ -33,11 +33,14 @@ export interface Region {
  */
 export interface Scene {
     id: number;
-    sentinel_id: string;
-    acquired_at: string; // ISO Date String
-    cloud_coverage: number;
-    etl_status: 'pending' | 'processing' | 'completed' | 'failed';
-    geometry?: GeoJSON.Polygon;
+    scene_id: string;
+    acquisition_date: string; // ISO Date String
+    cloud_cover?: number;
+    satellite: string;
+    tile?: string;
+    region_id: number;
+    created_at?: string;
+    updated_at?: string;
 }
 
 /**

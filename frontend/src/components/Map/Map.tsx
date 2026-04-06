@@ -17,6 +17,7 @@ let DefaultIcon = L.icon({
 L.Marker.prototype.options.icon = DefaultIcon;
 
 import ClassificationOverlay from './ClassificationOverlay';
+import MapLegend from './MapLegend';
 
 interface MapProps {
     regions: Region[];
@@ -58,14 +59,17 @@ export default function AppMap({ regions, selectedSceneUrl }: MapProps) {
                 </LayersControl>
 
                 {selectedSceneUrl && (
-                    <ClassificationOverlay url={selectedSceneUrl} />
+                    <>
+                        <ClassificationOverlay url={selectedSceneUrl} />
+                        <MapLegend />
+                    </>
                 )}
 
-                {regions.map((region) => (
+                {regions.filter(r => r.geometry).map((region) => (
                     <Polygon
                         key={region.id}
                         pathOptions={{ color: 'blue', fillColor: 'blue', fillOpacity: 0.1 }}
-                        positions={region.geometry.coordinates[0].map(coord => [coord[1], coord[0]] as [number, number])} // GeoJSON is [lng, lat], Leaflet is [lat, lng]
+                        positions={region.geometry!.coordinates[0].map(coord => [coord[1], coord[0]] as [number, number])} // GeoJSON is [lng, lat], Leaflet is [lat, lng]
                     >
                         <Popup>
                             <div className="p-1 min-w-[150px]">

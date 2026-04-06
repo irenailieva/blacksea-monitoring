@@ -1,16 +1,21 @@
 import { useEffect } from 'react';
 import { useMap } from 'react-leaflet';
+import proj4 from 'proj4';
+import L from 'leaflet';
 
-import 'georaster-layer-for-leaflet';
+// @ts-ignore
+window.proj4 = proj4;
+
 // @ts-ignore
 import parseGeoraster from 'georaster';
+import GeoRasterLayer from 'georaster-layer-for-leaflet';
 
 interface ClassificationOverlayProps {
     url: string;
     opacity?: number;
 }
 
-export default function ClassificationOverlay({ url, opacity = 0.7 }: ClassificationOverlayProps) {
+export default function ClassificationOverlay({ url, opacity = 0.8 }: ClassificationOverlayProps) {
     const map = useMap();
 
     useEffect(() => {
@@ -19,34 +24,47 @@ export default function ClassificationOverlay({ url, opacity = 0.7 }: Classifica
         let layer: any;
 
         fetch(url)
-            .then(response => response.arrayBuffer())
+            .then(response => {
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                return response.arrayBuffer();
+            })
             .then(arrayBuffer => parseGeoraster(arrayBuffer))
             .then(georaster => {
                 // @ts-ignore
                 layer = new GeoRasterLayer({
                     georaster: georaster,
                     opacity: opacity,
+                    proj4: proj4,
+                    zIndex: 1000,
+                    pane: 'overlayPane',
                     pixelValuesToColorFn: (values: number[]) => {
                         const val = values[0];
-                        // 1: Vegetation (Green), 2: Sand (Yellow), 3: Water (Blue/Transparent)
-                        if (val === 1) return '#22c55e'; // Green
-                        if (val === 2) return '#eab308'; // Yellow
-                        if (val === 3) return 'transparent'; // Water
+                        // 255/0 are typical nodata
+                        if (val === georaster.noDataValue || val === 255 || val === 0) return 'transparent';
+                        
+                        // Robust range-based mapping to handle different model versions (1,2,3 or 10,20,30)
+                        if (val === 2 || (val >= 20 && val < 30)) return '#22c55e'; // Emerald Green (Algae)
+                        if (val === 1 || (val >= 10 && val < 20)) return '#facc15'; // Golden Yellow (Sand)
+                        if (val === 3 || (val >= 30 && val < 40)) return '#0ea5e9'; // Hydro Blue (Water)
+                        
                         return 'transparent';
                     },
-                    resolution: 64 // Adjust for performance
+                    resolution: 256 // High resolution for scientific detail
                 });
+                
                 layer.addTo(map);
-
-                // Fit bounds if it's the first layer or explicitly requested
-                // map.fitBounds(layer.getBounds());
+                
+                const bounds = layer.getBounds();
+                if (bounds.isValid()) {
+                    map.fitBounds(bounds, { animate: true, padding: [20, 20] });
+                }
             })
-            .catch(err => console.error("Error loading georaster:", err));
+            .catch(err => {
+                console.error("💥 FAILED to load GeoTIFF classification:", url, err);
+            });
 
         return () => {
-            if (layer) {
-                map.removeLayer(layer);
-            }
+            if (layer && map) map.removeLayer(layer);
         };
     }, [url, opacity, map]);
 
