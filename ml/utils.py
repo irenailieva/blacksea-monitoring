@@ -53,18 +53,19 @@ def prepare_features(blue: np.ndarray, green: np.ndarray, red: np.ndarray, nir: 
     Returns:
         Feature matrix with shape (n_samples, 6)
     """
-    # 🌡️ Auto-Intake Calibration
-    # Sentinel-2 Raw (L2A) is 0-10,000. Pre-scaled analysis products are 0.0-1.0.
-    # We detect the range to avoid 'double-normalizing' pre-scaled data.
+    # 🌡️ Auto-Intake Calibration Fix
+    # The models were trained on Raw DN (0-10000) features for the spectral bands!
+    # If the input is pre-scaled reflectance (0.0-1.0), we must MULTIPLY by 10,000.
+    # If the input is already Raw DN, we leave it as is.
     data_max = np.nanmax(blue)
-    scale_factor = 10000.0 if data_max > 2.0 else 1.0
+    scale_factor = 10000.0 if data_max <= 2.0 else 1.0
     
-    b2_norm = blue / scale_factor
-    b3_norm = green / scale_factor
-    b4_norm = red / scale_factor
-    b8_norm = nir / scale_factor
+    b2_scaled = blue * scale_factor
+    b3_scaled = green * scale_factor
+    b4_scaled = red * scale_factor
+    b8_scaled = nir * scale_factor
 
-    ndvi = calculate_ndvi(b8_norm, b4_norm)
-    ndwi = calculate_ndwi(b3_norm, b8_norm)
+    ndvi = calculate_ndvi(b8_scaled, b4_scaled)
+    ndwi = calculate_ndwi(b3_scaled, b8_scaled)
     
-    return np.column_stack([b2_norm, b3_norm, b4_norm, b8_norm, ndvi, ndwi])
+    return np.column_stack([b2_scaled, b3_scaled, b4_scaled, b8_scaled, ndvi, ndwi])

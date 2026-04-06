@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { MapContainer, TileLayer, Polygon, Popup, LayersControl } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Region } from '../../api/types';
 import L from 'leaflet';
+import { Eye, EyeOff } from 'lucide-react';
 
 // Fix for default marker icon in Leaflet + React
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -27,9 +29,21 @@ interface MapProps {
 export default function AppMap({ regions, selectedSceneUrl }: MapProps) {
     // Center of Black Sea approx
     const center: [number, number] = [43.0, 27.9]; // Adjusted to Bulgarian coast
+    const [showOverlay, setShowOverlay] = useState(true);
 
     return (
-        <div className="h-full w-full rounded-lg overflow-hidden border">
+        <div className="relative h-full w-full rounded-lg overflow-hidden border">
+            {selectedSceneUrl && (
+                <div className="absolute top-[70px] right-2.5 z-[1000]">
+                    <button 
+                        onClick={() => setShowOverlay(!showOverlay)}
+                        className="bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 shadow-lg rounded flex items-center p-2 border border-slate-200 transition-colors"
+                        title={showOverlay ? "Hide Classification Overlay" : "Show Classification Overlay"}
+                    >
+                        {showOverlay ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4 text-blue-600" />}
+                    </button>
+                </div>
+            )}
             <MapContainer center={center} zoom={9} scrollWheelZoom={true} className="h-full w-full">
                 <LayersControl position="topright">
                     <LayersControl.BaseLayer checked name="OpenStreetMap">
@@ -59,10 +73,13 @@ export default function AppMap({ regions, selectedSceneUrl }: MapProps) {
                 </LayersControl>
 
                 {selectedSceneUrl && (
-                    <>
-                        <ClassificationOverlay url={selectedSceneUrl} />
-                        <MapLegend />
-                    </>
+                    <ClassificationOverlay 
+                        url={selectedSceneUrl} 
+                        opacity={showOverlay ? 0.8 : 0} 
+                    />
+                )}
+                {selectedSceneUrl && (
+                    <MapLegend />
                 )}
 
                 {regions.filter(r => r.geometry).map((region) => (

@@ -25,7 +25,54 @@ def process_scene(band_paths: dict, output_path: str, model):
     if not all([b2_path, b3_path, b4_path, b8_path, scl_path]):
         raise ValueError("Missing one or more required band paths.")
 
-    print(f"🔄 Processing scene...")
+    # 🚀 SINGLE FILE MANUAL UPLOAD HANDLING
+    # If the user uploaded a single RGB/Multispectral GeoTIFF, the backend passes the same file for all bands.
+    is_single_file = (b2_path == b3_path == b4_path == b8_path == scl_path) and b2_path is not None
+    
+    if is_single_file:
+        print(f"🔄 Processing single multi-band manual upload...")
+        with rasterio.open(b2_path) as src:
+            profile = src.profile.copy()
+            profile.update(driver='GTiff', dtype=rasterio.uint8, count=1, nodata=255)
+            
+            has_nir = src.count >= 4
+            
+            with rasterio.open(output_path, 'w', **profile) as dst:
+                for ji, window in src.block_windows(1):
+                    # Band 1 -> Red (b4), Band 2 -> Green (b3), Band 3 -> Blue (b2)
+                    b4 = src.read(1, window=window).astype('float32')
+                    b3 = src.read(2, window=window).astype('float32') if src.count >= 2 else b4
+                    b2 = src.read(3, window=window).astype('float32') if src.count >= 3 else b3
+                    
+                    if has_nir:
+                        b8 = src.read(4, window=window).astype('float32')
+                    else:
+                        # Synthetic NIR fallback to Green ensures NDVI naturally isolates vegetation
+                        # while avoiding false positives over bare soil.
+                        b8 = b3
+
+                    
+                    target_mask = np.ones(b2.shape, dtype=bool) # No cloud mask available in RGB orthomosaics
+                    result_block = np.full(b2.shape, 255, dtype=np.uint8)
+                    
+                    b2_water = b2[target_mask]
+                    b3_water = b3[target_mask]
+                    b4_water = b4[target_mask]
+                    b8_water = b8[target_mask]
+                    
+                    X_water = prepare_features(b2_water, b3_water, b4_water, b8_water)
+                    
+                    if len(X_water) > 0:
+                        mapped_pred = model.predict_batch(X_water)
+                        result_block[target_mask] = mapped_pred
+                        
+                    dst.write(result_block, 1, window=window)
+                    print(".", end="", flush=True)
+
+        print(f"\n🎉 Single-file Map generated at {output_path}")
+        return
+
+    print(f"🔄 Processing multi-file Sentinel-2 scene...")
 
     # 1. Read SCL and Cloud Masking
     with rasterio.open(b2_path) as src_ref:
