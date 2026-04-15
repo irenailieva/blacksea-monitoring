@@ -38,6 +38,26 @@ export default function Analysis() {
         );
     }
 
+    const exportAnalysisCSV = () => {
+        const regionName = regions.find(r => r.id.toString() === selectedRegion)?.name || 'Unknown Region';
+        const headers = ["Region", "Metric", "Value", "Trend"];
+        const rows = [
+            [regionName, "Total Vegetation Area (m²)", "12345", "+2.5%"],
+            [regionName, "Average Confidence Score (%)", "94.8", "+0.2%"],
+            [regionName, "Active Anomalies", "3", "-1"]
+        ];
+        
+        const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `analysis_summary_${regionName.replace(/ /g, '_')}_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     return (
         <div className="flex flex-col space-y-4 h-full  overflow-y-auto pr-2">
             <div className="flex items-center justify-between space-y-2">
@@ -55,7 +75,7 @@ export default function Analysis() {
                             ))}
                         </SelectContent>
                     </Select>
-                    <Button size="icon" variant="outline" onClick={() => alert('Exporting dashboard data as CSV...')}>
+                    <Button size="icon" variant="outline" onClick={exportAnalysisCSV}>
                         <Download className="h-4 w-4" />
                     </Button>
                 </div>

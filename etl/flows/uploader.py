@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+from datetime import datetime, date
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from loguru import logger
@@ -14,7 +14,7 @@ from backend.app.models.scene import Scene
 from backend.app.models.scene_file import SceneFile
 # We don't need to redefine Base since we are using the models directly
 
-def upload_to_db(file_path: str, db_url: str, aoi_config: dict):
+def upload_to_db(file_path: str, db_url: str, aoi_config: dict, scene_id: str = None, acquisition_date: date = None):
     """
     Uploads metadata of the processed file to PostGIS using the backend schema.
     
@@ -22,6 +22,7 @@ def upload_to_db(file_path: str, db_url: str, aoi_config: dict):
         file_path (str): Path to the file to upload.
         db_url (str): Database connection URL.
         aoi_config (dict): AOI configuration including name and bbox.
+        scene_id (str): Optional Scene ID override.
     """
     logger.info(f"Uploading metadata for {file_path} to DB...")
     
@@ -58,19 +59,30 @@ def upload_to_db(file_path: str, db_url: str, aoi_config: dict):
             
             # 2. Get or Create Scene
             filename = os.path.basename(file_path)
-            acquisition_date = datetime.utcnow().date() # Should extract from metadata
             
-            scene_identifier = f"S2_MOCK_{acquisition_date.strftime('%Y%m%d')}_{region_name}"
+            # Use provided scene_id or extract from filename
+            scene_identifier = scene_id
+            if not scene_identifier:
+                if filename.startswith("sentinel2_"):
+                    # Strip '.tif' and suffixes like '_classification', '_processed', etc.
+                    scene_identifier = filename.split(".tif")[0]
+                    # Further strip common suffixes to get the base scene ID
+                    for suffix in ["_processed", "_classification", "_NDVI"]:
+                        if suffix in scene_identifier:
+                            scene_identifier = scene_identifier.split(suffix)[0]
+                else:
+                    # Fallback for manual uploads or other formats
+                    scene_identifier = filename.split(".")[0]
             
             scene = session.query(Scene).filter_by(scene_id=scene_identifier).first()
             if not scene:
                 logger.info(f"Creating new scene: {scene_identifier}")
                 scene = Scene(
                     scene_id=scene_identifier,
-                    acquisition_date=acquisition_date,
+                    acquisition_date=acquisition_date or datetime.utcnow().date(),
                     satellite="Sentinel-2",
                     region_id=region.id,
-                    cloud_cover=0.0 # Placeholder
+                    cloud_cover=0.0
                 )
                 session.add(scene)
                 session.commit()
@@ -82,6 +94,8 @@ def upload_to_db(file_path: str, db_url: str, aoi_config: dict):
                 file_type = "L2A"
             if "NDVI" in filename:
                 file_type = "NDVI"
+            if "classification" in filename:
+                file_type = "CLASSIFICATION"
             
             existing_file = session.query(SceneFile).filter_by(scene_id=scene.id, file_type=file_type).first()
             if existing_file:

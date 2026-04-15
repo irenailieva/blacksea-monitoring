@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import yaml
+import datetime
 import requests
 from dotenv import load_dotenv
 from loguru import logger
@@ -29,8 +30,8 @@ def update_job_status(engine, job_id, status, progress=None):
                 # jsonb_set requires a valid JSONB literal — json.dumps() gives us '5' not "'5'"
                 progress_json = json.dumps(progress)
                 prog_str = (
-                    f", payload = jsonb_set(COALESCE(payload, '{{}}'::jsonb), "
-                    f"'{{progress}}', '{progress_json}'::jsonb) "
+                    f", payload = jsonb_set(COALESCE(payload::jsonb, '{{}}'::jsonb), "
+                    f"'{{progress}}', '{progress_json}'::jsonb)::json "
                 )
             else:
                 prog_str = ""
@@ -47,21 +48,28 @@ def update_job_status(engine, job_id, status, progress=None):
 
 
 def load_config():
-    # Try to find config.yml in parent directory (when running from flows/)
-    config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config.yml")
+    # Force absolute path resolution to avoid CWD issues
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    config_path = os.path.join(base_dir, "config.yml")
+    
     if not os.path.exists(config_path):
-        # Fallback to current directory
+        logger.warning(f"Config not found at {config_path}, trying fallback...")
         config_path = "config.yml"
+        
+    logger.info(f"Loading config from: {os.path.abspath(config_path)}")
     with open(config_path, "r") as f:
-        return yaml.safe_load(f)
+        config = yaml.safe_load(f)
+        if not config:
+            raise ValueError(f"Config file at {config_path} is empty or malformed.")
+        return config
 
 def run_pipeline(job_id=None):
-    logger.info("Starting ETL pipeline")
+    logger.info(f"Starting ETL pipeline (Job ID: {job_id})")
     
     config = load_config()
     
     # Get settings from env or config
-    mode = os.getenv("ETL_MODE", "mock")
+    mode = os.getenv("ETL_MODE", "real")
     output_dir = os.getenv("ETL_OUT_DIR", config['output']['dir'])
     db_url = os.getenv("DATABASE_URL")
     
@@ -90,9 +98,13 @@ def run_pipeline(job_id=None):
 
     try:
         # 1. Download
+        time_range = {
+            "start_date": config['time'].get('since'),
+            "end_date": config['time'].get('to')
+        }
         download_result = download_data(
             aoi=config['aoi'],
-            time_range=config['time'],
+            time_range=time_range,
             output_dir=output_dir,
             mode=mode
         )
@@ -113,9 +125,33 @@ def run_pipeline(job_id=None):
         update_job_status(engine, job_id, 'processing', 70)
         
         # 4. Upload Metadata
-        upload_to_db(raw_file, db_url, config['aoi'])
-        upload_to_db(processed_file, db_url, config['aoi'])
-        upload_to_db(ndvi_file, db_url, config['aoi'])
+        # Extract Scene ID and Date once from the composite filename
+        def get_scene_metadata(f):
+            fname = os.path.basename(f)
+            sid = ""
+            dt = datetime.datetime.utcnow().date()
+            
+            if fname.startswith("sentinel2_"):
+                sid = fname.split(".tif")[0]
+                # sentinel2_S2B_35TNH_20240122_0_L2A
+                parts = sid.split("_")
+                if len(parts) >= 4:
+                    date_str = parts[3] # 20240122
+                    try:
+                        from datetime import datetime as dt_obj
+                        dt = dt_obj.strptime(date_str, "%Y%m%d").date()
+                    except:
+                        pass
+            else:
+                sid = fname.split(".")[0].replace("_processed", "").replace("_NDVI", "").replace("_classification", "")
+            
+            return sid, dt
+
+        scene_id_override, real_acquisition_date = get_scene_metadata(raw_file)
+
+        upload_to_db(raw_file, db_url, config['aoi'], scene_id=scene_id_override, acquisition_date=real_acquisition_date)
+        upload_to_db(processed_file, db_url, config['aoi'], scene_id=scene_id_override, acquisition_date=real_acquisition_date)
+        upload_to_db(ndvi_file, db_url, config['aoi'], scene_id=scene_id_override, acquisition_date=real_acquisition_date)
         
         update_job_status(engine, job_id, 'processing', 90)
         
@@ -155,7 +191,7 @@ def run_pipeline(job_id=None):
             if resp.status_code == 200:
                 logger.success(f"ML Inference completed. Output: {output_path}")
                 # Upload ML output metadata
-                upload_to_db(output_path, db_url, config['aoi'])
+                upload_to_db(output_path, db_url, config['aoi'], scene_id=scene_id_override, acquisition_date=real_acquisition_date)
             else:
                 logger.error(f"ML Inference failed: {resp.status_code} - {resp.text}")
         except Exception as e:

@@ -97,6 +97,13 @@ input[type="reset"] {
 }
 
 /* Global fallback for any other portals */
-[data-radix-portal] {
-  z-index: 1000000 !important;
-}
+/* Prevent browser from blurring categorical classification maps during zoom */
+.leaflet-overlay-pane canvas {
+  image-rendering: optimizeSpeed;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: -o-crisp-edges;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+  -ms-interpolation-mode: nearest-neighbor;
+}

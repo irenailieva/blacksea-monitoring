@@ -5,6 +5,8 @@ import cv2
 import os
 import time
 from utils import prepare_features
+from PIL import Image
+
 
 def process_scene(band_paths: dict, output_path: str, model):
     """
@@ -159,3 +161,37 @@ def process_scene(band_paths: dict, output_path: str, model):
             print(".", end="", flush=True)
 
     print(f"\n🎉 Map generated at {output_path}")
+    
+    # 🔥 BAKE HIGH-PERFORMANCE PNG
+    png_path = output_path.replace(".tif", ".png")
+    bake_png(output_path, png_path)
+
+def bake_png(tif_path: str, png_path: str):
+    """
+    Converts a 1-channel classification TIFF into a 4-channel transparent RGBA PNG 
+    using ROBUST range-mapping for floating-point and categorical artifacts.
+    """
+    print(f"📦 Baking high-performance PNG: {png_path}...")
+    with rasterio.open(tif_path) as src:
+        data = src.read(1).astype(np.float32)
+        
+        # Initialize RGBA (H, W, 4)
+        h, w = data.shape
+        rgba = np.zeros((h, w, 4), dtype=np.uint8)
+        
+        # Robust Range Mapping (Matches the most defensive frontend logic)
+        # 1. Algae (Emerald Green #22c55e) - Priority 1
+        algae_mask = ((data >= 1.5) & (data < 2.5)) | ((data >= 15) & (data < 25.5))
+        rgba[algae_mask] = [34, 197, 94, 255]
+        
+        # 2. Sand/Land (Golden Yellow #facc15)
+        sand_mask = ((data >= 0.5) & (data < 1.5)) | ((data >= 5) & (data < 15))
+        rgba[sand_mask] = [250, 204, 21, 255]
+        
+        # 3. Water (Hydro Blue #0ea5e9)
+        water_mask = ((data >= 2.5) & (data < 5.0)) | ((data >= 25.5) & (data < 45))
+        rgba[water_mask] = [14, 165, 233, 255]
+
+        img = Image.fromarray(rgba, 'RGBA')
+        img.save(png_path, 'PNG')
+        print(f"✅ PNG Baked successfully with {np.count_nonzero(algae_mask)} algae pixels.")
