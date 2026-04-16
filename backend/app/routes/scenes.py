@@ -260,6 +260,56 @@ async def trigger_automated_etl(
     return db_job
 
 
+@router.post("/analyze-aoi", response_model=schemas.AoiAnalysisResponse)
+async def analyze_aoi(
+    request: schemas.AoiAnalysisRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_any_role("analyst", "admin"))
+):
+    """
+    User-driven AOI analysis flow.
+    Accepts a bounding box drawn on the map, queries STAC for the best available
+    Sentinel-2 scene over that area, runs the full ETL + ML pipeline, and stores
+    the classification result in the DB.
+    """
+    bbox = request.bbox
+    aoi_name = request.aoi_name or f"aoi_{bbox[0]:.3f}_{bbox[1]:.3f}"
+
+    job_in = schemas.ETLJobCreate(
+        job_type="aoi_analysis",
+        status="pending",
+        payload={
+            "progress": 0,
+            "bbox": bbox,
+            "aoi_name": aoi_name,
+            "cloud_max": request.cloud_max,
+        }
+    )
+    db_job = crud_etl_job.etl_job.create(db=db, obj_in=job_in.model_dump())
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(
+                "http://etl:8001/trigger",
+                json={
+                    "job_id": db_job.id,
+                    "bbox": bbox,
+                    "aoi_name": aoi_name,
+                    "cloud_max": request.cloud_max,
+                }
+            )
+            resp.raise_for_status()
+    except Exception as e:
+        crud_etl_job.etl_job.update(db, db_obj=db_job, obj_in={"status": "failed"})
+        raise HTTPException(status_code=500, detail=f"Failed to trigger AOI analysis: {e}")
+
+    return schemas.AoiAnalysisResponse(
+        job_id=db_job.id,
+        status="pending",
+        message=f"Analysis started for AOI '{aoi_name}'. Poll /scenes/etl-status for progress."
+    )
+
+
 @router.post("/etl-retry/{job_id}", response_model=schemas.ETLJobRead)
 async def retry_etl_job(
     job_id: int,

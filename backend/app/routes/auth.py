@@ -130,7 +130,7 @@ def login(
             key="access_token",
             value=access_token,
             httponly=True,
-            secure=True,  # В продукция трябва да е True (HTTPS)
+            secure=False,   # Must be False for HTTP localhost; set True only in HTTPS production
             samesite="lax",
             max_age=expires_seconds,
             path="/",

@@ -7,7 +7,7 @@ import pystac_client
 import odc.stac
 import rioxarray
 
-def download_data(aoi: dict, time_range: dict, output_dir: str, mode: str = "mock") -> dict:
+def download_data(aoi: dict, time_range: dict, output_dir: str, mode: str = "mock", cloud_max: int = 20) -> dict:
     """
     Downloads Sentinel-2 data or generates a mock GeoTIFF.
     
@@ -45,8 +45,8 @@ def download_data(aoi: dict, time_range: dict, output_dir: str, mode: str = "moc
                 collections=["sentinel-2-l2a"],
                 bbox=bbox,
                 datetime=datetime_query,
-                max_items=1,
-                query={"eo:cloud_cover": {"lt": 20}}
+                max_items=10,
+                query={"eo:cloud_cover": {"lt": cloud_max}}
             )
             
             items = list(search.item_collection())
@@ -55,7 +55,8 @@ def download_data(aoi: dict, time_range: dict, output_dir: str, mode: str = "moc
                 logger.warning("No Sentinel-2 scenes found for this AOI and date range.")
                 raise FileNotFoundError("No Satellite scenes found. Check your search parameters.")
                 
-            logger.info(f"Found {len(items)} scenes. Downloading the first one...")
+            logger.info(f"Found {len(items)} scenes. Processing the most recent one...")
+            item = items[0]  # most recent (STAC returns newest first)
             
             # Load Composite data for Dashboard (Blue, Green, Red, NIR)
             ds = odc.stac.load(
@@ -69,7 +70,7 @@ def download_data(aoi: dict, time_range: dict, output_dir: str, mode: str = "moc
             if "time" in ds.dims:
                 ds = ds.isel(time=0)
                 
-            composite_filename = f"sentinel2_{items[0].id}.tif"
+            composite_filename = f"sentinel2_{item.id}.tif"
             composite_filepath = os.path.join(output_dir, composite_filename)
             
             # Convert to DataArray and save
@@ -94,18 +95,17 @@ def download_data(aoi: dict, time_range: dict, output_dir: str, mode: str = "moc
             }
 
             for stac_name, ml_name in band_map.items():
-                band_filename = f"sentinel2_{items[0].id}_{ml_name}.tif"
+                band_filename = f"sentinel2_{item.id}_{ml_name}.tif"
                 band_filepath = os.path.join(output_dir, band_filename)
-                
-                # Select single band
-                # ds_ml[stac_name] is the DataArray for that band
                 ds_ml[stac_name].rio.to_raster(band_filepath)
                 ml_band_paths[ml_name] = band_filepath
             
             logger.success(f"Downloaded real data to {composite_filepath}")
             return {
                 "composite": composite_filepath,
-                "ml_bands": ml_band_paths
+                "ml_bands": ml_band_paths,
+                "stac_item_id": item.id,
+                "all_stac_ids": [i.id for i in items],
             }
             
         except Exception as e:

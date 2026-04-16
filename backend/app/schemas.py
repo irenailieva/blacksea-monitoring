@@ -291,6 +291,26 @@ class ETLJobRead(ETLJobBase):
     updated_at: datetime
 
 
+# ==================== AOI Analysis Schemas ====================
+
+class AoiAnalysisRequest(BaseSchema):
+    """Request body for user-driven AOI analysis."""
+    bbox: list[float] = Field(
+        ...,
+        min_length=4, max_length=4,
+        description="[minLon, minLat, maxLon, maxLat]"
+    )
+    aoi_name: Optional[str] = Field(None, max_length=100)
+    cloud_max: Optional[int] = Field(20, ge=0, le=100)
+
+
+class AoiAnalysisResponse(BaseSchema):
+    """Immediate response — job created, poll /scenes/etl-status for progress."""
+    job_id: int
+    status: str
+    message: str
+
+
 # ==================== ErrorLog Schemas ====================
 
 class ErrorLogBase(BaseSchema):

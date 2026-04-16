@@ -4,8 +4,8 @@ aoi:
   bbox: [27.85, 43.20, 27.95, 43.25] # [minLon, minLat, maxLon, maxLat]
 
 time:
-  since: "2024-01-01"
-  to: "2024-01-31"
+  since: ""   # leave empty → pipeline uses a rolling 90-day window
+  to: ""      # leave empty → pipeline uses today as end date
 
 filters:
   cloud_max: 40 # % максимална облачност

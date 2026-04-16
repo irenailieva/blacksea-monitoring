@@ -16,6 +16,11 @@ interface JobStatus {
 
 const STATUS_ORDER: Record<string, number> = { processing: 0, running: 0, pending: 1, failed: 2, completed: 3 };
 
+/** Backend stores UTC but omits the 'Z' suffix — append it so the browser treats it as UTC and converts to local time. */
+function parseUTCDate(ts: string): Date {
+    return new Date(ts.endsWith('Z') ? ts : ts + 'Z');
+}
+
 function isActive(status: string) {
     return status === 'pending' || status === 'running' || status === 'processing';
 }
@@ -120,12 +125,12 @@ export function EtlMonitor() {
                                     <span className="text-[10px] text-muted-foreground">
                                         #{job.id} · Started:{' '}
                                         {job.started_at
-                                            ? new Date(job.started_at).toLocaleTimeString()
+                                            ? parseUTCDate(job.started_at).toLocaleTimeString()
                                             : 'N/A'}
                                         {job.finished_at && (
                                             <>
                                                 {' '}→ Finished:{' '}
-                                                {new Date(job.finished_at).toLocaleTimeString()}
+                                                {parseUTCDate(job.finished_at).toLocaleTimeString()}
                                             </>
                                         )}
                                     </span>

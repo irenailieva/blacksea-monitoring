@@ -5,7 +5,6 @@ import { Region } from '../../api/types';
 import L from 'leaflet';
 import { Eye, EyeOff } from 'lucide-react';
 
-// Fix for default marker icon in Leaflet + React
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 
@@ -15,30 +14,30 @@ let DefaultIcon = L.icon({
     iconSize: [25, 41],
     iconAnchor: [12, 41]
 });
-
 L.Marker.prototype.options.icon = DefaultIcon;
 
 import ClassificationOverlay from './ClassificationOverlay';
 import MapLegend from './MapLegend';
+import AoiDrawTool, { BBox } from './AoiDrawTool';
 
 interface MapProps {
     regions: Region[];
     selectedSceneUrl?: string;
+    onAoiSubmit?: (bbox: BBox, aoi_name: string) => void;
 }
 
-export default function AppMap({ regions, selectedSceneUrl }: MapProps) {
-    // Center of Black Sea approx
-    const center: [number, number] = [43.0, 27.9]; // Adjusted to Bulgarian coast
+export default function AppMap({ regions, selectedSceneUrl, onAoiSubmit }: MapProps) {
+    const center: [number, number] = [43.0, 27.9];
     const [showOverlay, setShowOverlay] = useState(true);
 
     return (
         <div className="relative h-full w-full rounded-lg overflow-hidden border">
             {selectedSceneUrl && (
                 <div className="absolute top-[70px] right-2.5 z-[1000]">
-                    <button 
+                    <button
                         onClick={() => setShowOverlay(!showOverlay)}
                         className="bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 shadow-lg rounded flex items-center p-2 border border-slate-200 transition-colors"
-                        title={showOverlay ? "Hide Classification Overlay" : "Show Classification Overlay"}
+                        title={showOverlay ? 'Hide Classification Overlay' : 'Show Classification Overlay'}
                     >
                         {showOverlay ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4 text-blue-600" />}
                     </button>
@@ -54,13 +53,13 @@ export default function AppMap({ regions, selectedSceneUrl }: MapProps) {
                     </LayersControl.BaseLayer>
                     <LayersControl.BaseLayer name="Satellite (Esri)">
                         <TileLayer
-                            attribution='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+                            attribution='Tiles &copy; Esri'
                             url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
                         />
                     </LayersControl.BaseLayer>
                     <LayersControl.BaseLayer name="Hydrography (Esri Ocean)">
                         <TileLayer
-                            attribution='Tiles &copy; Esri &mdash; Sources: GEBCO, NOAA, CHS, OSU, UNH, CSUMB, National Geographic, DeLorme, NAVTEQ, and Esri'
+                            attribution='Tiles &copy; Esri'
                             url="https://services.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}"
                         />
                     </LayersControl.BaseLayer>
@@ -72,21 +71,19 @@ export default function AppMap({ regions, selectedSceneUrl }: MapProps) {
                     </LayersControl.Overlay>
                 </LayersControl>
 
+                {/* AOI draw tool */}
+                {onAoiSubmit && <AoiDrawTool onAoiConfirm={onAoiSubmit} />}
+
                 {selectedSceneUrl && (
-                    <ClassificationOverlay 
-                        url={selectedSceneUrl} 
-                        opacity={showOverlay ? 0.8 : 0} 
-                    />
+                    <ClassificationOverlay url={selectedSceneUrl} opacity={showOverlay ? 0.8 : 0} />
                 )}
-                {selectedSceneUrl && (
-                    <MapLegend />
-                )}
+                {selectedSceneUrl && <MapLegend />}
 
                 {regions.filter(r => r.geometry).map((region) => (
                     <Polygon
                         key={region.id}
                         pathOptions={{ color: 'blue', fillColor: 'blue', fillOpacity: 0.1 }}
-                        positions={region.geometry!.coordinates[0].map(coord => [coord[1], coord[0]] as [number, number])} // GeoJSON is [lng, lat], Leaflet is [lat, lng]
+                        positions={region.geometry!.coordinates[0].map(coord => [coord[1], coord[0]] as [number, number])}
                     >
                         <Popup>
                             <div className="p-1 min-w-[150px]">
@@ -95,10 +92,6 @@ export default function AppMap({ regions, selectedSceneUrl }: MapProps) {
                                     <div className="flex justify-between text-[10px] text-muted-foreground uppercase">
                                         <span>Type</span>
                                         <span className="font-mono">{region.type}</span>
-                                    </div>
-                                    <div className="flex justify-between text-[10px] text-muted-foreground uppercase">
-                                        <span>Avg. Depth</span>
-                                        <span className="font-mono">12.5m</span>
                                     </div>
                                     <div className="mt-2 pt-2 border-t flex flex-col gap-1.5">
                                         <div className="flex justify-between text-xs">
@@ -111,7 +104,7 @@ export default function AppMap({ regions, selectedSceneUrl }: MapProps) {
                                         </div>
                                         <div className="flex justify-between text-xs">
                                             <span className="text-muted-foreground">Last Scanned:</span>
-                                            <span className="font-medium">2023-12-15</span>
+                                            <span className="font-medium">2026-04-06</span>
                                         </div>
                                     </div>
                                 </div>

@@ -46,12 +46,18 @@ def upload_to_db(file_path: str, db_url: str, aoi_config: dict, scene_id: str = 
             region = session.query(Region).filter_by(name=region_name).first()
             if not region:
                 logger.info(f"Creating new region: {region_name}")
+                # Compute approximate area in km² from bounding box
+                import math
+                lat_mid = (miny + maxy) / 2.0
+                width_km = abs(maxx - minx) * 111.32 * math.cos(math.radians(lat_mid))
+                height_km = abs(maxy - miny) * 110.57
+                computed_area_km2 = max(round(width_km * height_km, 4), 0.0001)
                 # Use WKTElement for PostGIS geometry
                 geometry_element = WKTElement(wkt_geom, srid=4326)
                 region = Region(
                     name=region_name,
-                    geometry=geometry_element, # Using the first file's bounds as region geom for now
-                    area_km2=0.0 # Placeholder
+                    geometry=geometry_element,
+                    area_km2=computed_area_km2
                 )
                 session.add(region)
                 session.commit()

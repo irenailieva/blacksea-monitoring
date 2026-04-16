@@ -63,7 +63,7 @@ def load_config():
             raise ValueError(f"Config file at {config_path} is empty or malformed.")
         return config
 
-def run_pipeline(job_id=None):
+def run_pipeline(job_id=None, bbox=None, aoi_name=None, cloud_max=None):
     logger.info(f"Starting ETL pipeline (Job ID: {job_id})")
     
     config = load_config()
@@ -97,20 +97,58 @@ def run_pipeline(job_id=None):
     update_job_status(engine, job_id, 'processing', 5)
 
     try:
-        # 1. Download
+        # Rolling 90-day window ending today
+        import datetime as dt_module
+        today = dt_module.date.today()
+        since_default = (today - dt_module.timedelta(days=90)).isoformat()
+        to_default = today.isoformat()
+
         time_range = {
-            "start_date": config['time'].get('since'),
-            "end_date": config['time'].get('to')
+            "start_date": config['time'].get('since') or since_default,
+            "end_date": config['time'].get('to') or to_default,
         }
+
+        # Use caller-supplied AOI when present, otherwise fall back to config
+        effective_aoi = dict(config['aoi'])
+        if bbox and len(bbox) == 4:
+            effective_aoi['bbox'] = bbox
+        if aoi_name:
+            effective_aoi['name'] = aoi_name
+        effective_cloud_max = cloud_max if cloud_max is not None else config['filters'].get('cloud_max', 20)
+
+        logger.info(f"AOI: {effective_aoi['name']}  bbox={effective_aoi['bbox']}  cloud_max={effective_cloud_max}%")
+
         download_result = download_data(
-            aoi=config['aoi'],
+            aoi=effective_aoi,
             time_range=time_range,
             output_dir=output_dir,
-            mode=mode
+            mode=mode,
+            cloud_max=effective_cloud_max,
         )
-        
+
+        # Pre-flight: check if the downloaded scene already exists in DB
+        stac_item_id = download_result.get("stac_item_id", "")
+        all_stac_ids = download_result.get("all_stac_ids", [stac_item_id])
+        expected_scene_id = f"sentinel2_{stac_item_id}" if stac_item_id else None
+
+        if expected_scene_id:
+            from sqlalchemy import text as sql_text
+            with engine.connect() as conn:
+                rows = conn.execute(
+                    sql_text("SELECT scene_id FROM scenes WHERE scene_id = :sid"),
+                    {"sid": expected_scene_id}
+                ).fetchall()
+            if rows:
+                logger.info(
+                    f"Scene '{expected_scene_id}' already in DB — "
+                    f"no new data available from STAC. Marking job as up-to-date."
+                )
+                update_job_status(engine, job_id, 'completed', 100)
+                return
+
         raw_file = download_result["composite"]
         ml_bands = download_result["ml_bands"]
+
         
         update_job_status(engine, job_id, 'processing', 30)
         
