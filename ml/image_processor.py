@@ -95,7 +95,11 @@ def process_scene(band_paths: dict, output_path: str, model):
     kernel = np.ones((15, 15), np.uint8) 
     dilated_cloud_mask = cv2.dilate(binary_cloud_mask, kernel, iterations=1)
 
-    print("✅ Cloud mask generated.")
+    # Land Masking
+    land_mask = np.isin(scl_full, [4, 5, 11]).astype(bool)
+    final_invalid_mask = dilated_cloud_mask.astype(bool) | land_mask
+
+    print("✅ Cloud and land masks generated.")
 
     # 2. Prepare Output Profile
     profile = ref_profile.copy()
@@ -123,11 +127,10 @@ def process_scene(band_paths: dict, output_path: str, model):
             col_start = window.col_off
             col_end = window.col_off + window.width
             
-            scl_chunk = scl_full[row_start:row_end, col_start:col_end]
-            cloud_chunk = dilated_cloud_mask[row_start:row_end, col_start:col_end]
+            invalid_chunk = final_invalid_mask[row_start:row_end, col_start:col_end]
             
-            # Target Mask: Not Cloud (Let model decide on Water/Land/Veg)
-            target_mask = (cloud_chunk == 0)
+            # Target Mask: Valid pixels only
+            target_mask = ~invalid_chunk
             
             if not target_mask.any():
                 empty_block = np.full((window.height, window.width), 255, dtype=rasterio.uint8)

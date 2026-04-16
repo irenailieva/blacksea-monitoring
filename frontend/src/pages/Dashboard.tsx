@@ -297,7 +297,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* ── Map ── */}
-                <div className="lg:col-span-3 h-[600px] lg:h-auto">
+                <div className="lg:col-span-3 min-h-[600px]">
                     <Card className="h-full">
                         <CardContent className="p-0 h-full">
                             <AppMap

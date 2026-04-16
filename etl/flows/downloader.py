@@ -106,6 +106,7 @@ def download_data(aoi: dict, time_range: dict, output_dir: str, mode: str = "moc
                 "ml_bands": ml_band_paths,
                 "stac_item_id": item.id,
                 "all_stac_ids": [i.id for i in items],
+                "cloud_cover": item.properties.get("eo:cloud_cover", 0.0),
             }
             
         except Exception as e:

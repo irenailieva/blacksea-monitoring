@@ -186,10 +186,11 @@ def run_pipeline(job_id=None, bbox=None, aoi_name=None, cloud_max=None):
             return sid, dt
 
         scene_id_override, real_acquisition_date = get_scene_metadata(raw_file)
+        real_cloud_cover = download_result.get("cloud_cover", 0.0)
 
-        upload_to_db(raw_file, db_url, config['aoi'], scene_id=scene_id_override, acquisition_date=real_acquisition_date)
-        upload_to_db(processed_file, db_url, config['aoi'], scene_id=scene_id_override, acquisition_date=real_acquisition_date)
-        upload_to_db(ndvi_file, db_url, config['aoi'], scene_id=scene_id_override, acquisition_date=real_acquisition_date)
+        upload_to_db(raw_file, db_url, config['aoi'], scene_id=scene_id_override, acquisition_date=real_acquisition_date, cloud_cover=real_cloud_cover)
+        upload_to_db(processed_file, db_url, config['aoi'], scene_id=scene_id_override, acquisition_date=real_acquisition_date, cloud_cover=real_cloud_cover)
+        upload_to_db(ndvi_file, db_url, config['aoi'], scene_id=scene_id_override, acquisition_date=real_acquisition_date, cloud_cover=real_cloud_cover)
         
         update_job_status(engine, job_id, 'processing', 90)
         

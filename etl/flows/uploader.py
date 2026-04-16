@@ -14,7 +14,7 @@ from backend.app.models.scene import Scene
 from backend.app.models.scene_file import SceneFile
 # We don't need to redefine Base since we are using the models directly
 
-def upload_to_db(file_path: str, db_url: str, aoi_config: dict, scene_id: str = None, acquisition_date: date = None):
+def upload_to_db(file_path: str, db_url: str, aoi_config: dict, scene_id: str = None, acquisition_date: date = None, cloud_cover: float = 0.0):
     """
     Uploads metadata of the processed file to PostGIS using the backend schema.
     
@@ -23,6 +23,8 @@ def upload_to_db(file_path: str, db_url: str, aoi_config: dict, scene_id: str = 
         db_url (str): Database connection URL.
         aoi_config (dict): AOI configuration including name and bbox.
         scene_id (str): Optional Scene ID override.
+        acquisition_date (date): Date of scene.
+        cloud_cover (float): Cloud cover percentage.
     """
     logger.info(f"Uploading metadata for {file_path} to DB...")
     
@@ -88,7 +90,7 @@ def upload_to_db(file_path: str, db_url: str, aoi_config: dict, scene_id: str = 
                     acquisition_date=acquisition_date or datetime.utcnow().date(),
                     satellite="Sentinel-2",
                     region_id=region.id,
-                    cloud_cover=0.0
+                    cloud_cover=cloud_cover
                 )
                 session.add(scene)
                 session.commit()

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { MapContainer, TileLayer, Polygon, Popup, LayersControl } from 'react-leaflet';
+import { useState, useEffect } from 'react';
+import { MapContainer, TileLayer, Polygon, Popup, LayersControl, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Region } from '../../api/types';
 import L from 'leaflet';
@@ -26,6 +26,22 @@ interface MapProps {
     onAoiSubmit?: (bbox: BBox, aoi_name: string) => void;
 }
 
+function MapResizer() {
+    const map = useMap();
+    useEffect(() => {
+        const resizeObserver = new ResizeObserver(() => {
+            map.invalidateSize();
+        });
+        const container = map.getContainer();
+        resizeObserver.observe(container);
+        return () => {
+            resizeObserver.unobserve(container);
+            resizeObserver.disconnect();
+        };
+    }, [map]);
+    return null;
+}
+
 export default function AppMap({ regions, selectedSceneUrl, onAoiSubmit }: MapProps) {
     const center: [number, number] = [43.0, 27.9];
     const [showOverlay, setShowOverlay] = useState(true);
@@ -44,6 +60,7 @@ export default function AppMap({ regions, selectedSceneUrl, onAoiSubmit }: MapPr
                 </div>
             )}
             <MapContainer center={center} zoom={9} scrollWheelZoom={true} className="h-full w-full">
+                <MapResizer />
                 <LayersControl position="topright">
                     <LayersControl.BaseLayer checked name="OpenStreetMap">
                         <TileLayer
