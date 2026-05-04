@@ -135,14 +135,23 @@ def run_pipeline(job_id=None, bbox=None, aoi_name=None, cloud_max=None):
         if expected_scene_id:
             from sqlalchemy import text as sql_text
             with engine.connect() as conn:
+                # Check if scene exists AND is linked to the current AOI name
                 rows = conn.execute(
-                    sql_text("SELECT s.scene_id FROM scenes s JOIN scene_files f ON s.id = f.scene_id WHERE s.scene_id = :sid AND f.file_type = 'CLASSIFICATION'"),
-                    {"sid": expected_scene_id}
+                    sql_text("""
+                        SELECT s.scene_id 
+                        FROM scenes s 
+                        JOIN scene_files f ON s.id = f.scene_id 
+                        JOIN regions r ON s.region_id = r.id
+                        WHERE s.scene_id = :sid 
+                          AND f.file_type = 'CLASSIFICATION'
+                          AND r.name = :rname
+                    """),
+                    {"sid": expected_scene_id, "rname": effective_aoi['name']}
                 ).fetchall()
             if rows:
                 logger.info(
-                    f"Scene '{expected_scene_id}' already in DB — "
-                    f"no new data available from STAC. Marking job as up-to-date."
+                    f"Scene '{expected_scene_id}' already in DB for region '{effective_aoi['name']}' — "
+                    f"no new data available. Marking job as up-to-date."
                 )
                 update_job_status(engine, job_id, 'completed', 100)
                 return
@@ -189,13 +198,13 @@ def run_pipeline(job_id=None, bbox=None, aoi_name=None, cloud_max=None):
         scene_id_override, real_acquisition_date = get_scene_metadata(raw_file)
         real_cloud_cover = download_result.get("cloud_cover", 0.0)
 
-        upload_to_db(raw_file, db_url, config['aoi'], scene_id=scene_id_override, acquisition_date=real_acquisition_date, cloud_cover=real_cloud_cover)
+        upload_to_db(raw_file, db_url, effective_aoi, scene_id=scene_id_override, acquisition_date=real_acquisition_date, cloud_cover=real_cloud_cover)
         update_job_status(engine, job_id, 'processing', 75)
         
-        upload_to_db(processed_file, db_url, config['aoi'], scene_id=scene_id_override, acquisition_date=real_acquisition_date, cloud_cover=real_cloud_cover)
+        upload_to_db(processed_file, db_url, effective_aoi, scene_id=scene_id_override, acquisition_date=real_acquisition_date, cloud_cover=real_cloud_cover)
         update_job_status(engine, job_id, 'processing', 80)
         
-        upload_to_db(ndvi_file, db_url, config['aoi'], scene_id=scene_id_override, acquisition_date=real_acquisition_date, cloud_cover=real_cloud_cover)
+        upload_to_db(ndvi_file, db_url, effective_aoi, scene_id=scene_id_override, acquisition_date=real_acquisition_date, cloud_cover=real_cloud_cover)
         update_job_status(engine, job_id, 'processing', 90)
         
         # 5. ML Inference
@@ -234,7 +243,7 @@ def run_pipeline(job_id=None, bbox=None, aoi_name=None, cloud_max=None):
             if resp.status_code == 200:
                 logger.success(f"ML Inference completed. Output: {output_path}")
                 # Upload ML output metadata
-                upload_to_db(output_path, db_url, config['aoi'], scene_id=scene_id_override, acquisition_date=real_acquisition_date)
+                upload_to_db(output_path, db_url, effective_aoi, scene_id=scene_id_override, acquisition_date=real_acquisition_date)
             else:
                 logger.error(f"ML Inference failed: {resp.status_code} - {resp.text}")
         except Exception as e:

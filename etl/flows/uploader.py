@@ -95,6 +95,11 @@ def upload_to_db(file_path: str, db_url: str, aoi_config: dict, scene_id: str = 
                 session.add(scene)
                 session.commit()
                 session.refresh(scene)
+            elif scene.region_id != region.id:
+                logger.info(f"Updating existing scene {scene_identifier} to new region: {region_name}")
+                scene.region_id = region.id
+                session.commit()
+                session.refresh(scene)
             
             # 3. Create SceneFile
             file_type = "RAW"
