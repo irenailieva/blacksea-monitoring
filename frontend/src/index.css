@@ -8,6 +8,9 @@
   --color-aquatic-algae: #22c55e;
   --color-aquatic-sand: #eab308;
 
+  --font-sans: "Montserrat", sans-serif;
+  --font-heading: "Mont", sans-serif;
+
   /* Standard Shadcn / UI variables for V4 compatibility */
   --color-background: hsl(0 0% 100%);
   --color-foreground: hsl(222.2 84% 4.9%);
@@ -53,6 +56,14 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 221.2 83.2% 53.3%;
     --radius: 0.5rem;
+  }
+  
+  body {
+    font-family: var(--font-sans);
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
   }
 }
 
