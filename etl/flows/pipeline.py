@@ -124,6 +124,7 @@ def run_pipeline(job_id=None, bbox=None, aoi_name=None, cloud_max=None):
             output_dir=output_dir,
             mode=mode,
             cloud_max=effective_cloud_max,
+            progress_callback=lambda p: update_job_status(engine, job_id, 'processing', p)
         )
 
         # Pre-flight: check if the downloaded scene already exists in DB
@@ -135,7 +136,7 @@ def run_pipeline(job_id=None, bbox=None, aoi_name=None, cloud_max=None):
             from sqlalchemy import text as sql_text
             with engine.connect() as conn:
                 rows = conn.execute(
-                    sql_text("SELECT scene_id FROM scenes WHERE scene_id = :sid"),
+                    sql_text("SELECT s.scene_id FROM scenes s JOIN scene_files f ON s.id = f.scene_id WHERE s.scene_id = :sid AND f.file_type = 'CLASSIFICATION'"),
                     {"sid": expected_scene_id}
                 ).fetchall()
             if rows:
@@ -189,9 +190,12 @@ def run_pipeline(job_id=None, bbox=None, aoi_name=None, cloud_max=None):
         real_cloud_cover = download_result.get("cloud_cover", 0.0)
 
         upload_to_db(raw_file, db_url, config['aoi'], scene_id=scene_id_override, acquisition_date=real_acquisition_date, cloud_cover=real_cloud_cover)
-        upload_to_db(processed_file, db_url, config['aoi'], scene_id=scene_id_override, acquisition_date=real_acquisition_date, cloud_cover=real_cloud_cover)
-        upload_to_db(ndvi_file, db_url, config['aoi'], scene_id=scene_id_override, acquisition_date=real_acquisition_date, cloud_cover=real_cloud_cover)
+        update_job_status(engine, job_id, 'processing', 75)
         
+        upload_to_db(processed_file, db_url, config['aoi'], scene_id=scene_id_override, acquisition_date=real_acquisition_date, cloud_cover=real_cloud_cover)
+        update_job_status(engine, job_id, 'processing', 80)
+        
+        upload_to_db(ndvi_file, db_url, config['aoi'], scene_id=scene_id_override, acquisition_date=real_acquisition_date, cloud_cover=real_cloud_cover)
         update_job_status(engine, job_id, 'processing', 90)
         
         # 5. ML Inference

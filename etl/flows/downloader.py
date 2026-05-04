@@ -7,7 +7,7 @@ import pystac_client
 import odc.stac
 import rioxarray
 
-def download_data(aoi: dict, time_range: dict, output_dir: str, mode: str = "mock", cloud_max: int = 20) -> dict:
+def download_data(aoi: dict, time_range: dict, output_dir: str, mode: str = "mock", cloud_max: int = 20, progress_callback=None) -> dict:
     """
     Downloads Sentinel-2 data or generates a mock GeoTIFF.
     
@@ -16,6 +16,7 @@ def download_data(aoi: dict, time_range: dict, output_dir: str, mode: str = "moc
         time_range (dict): Time range configuration.
         output_dir (str): Directory to save the downloaded file.
         mode (str): 'mock' or 'real'.
+        progress_callback (callable): Optional callback for progress updates.
         
     Returns:
         dict: Dictionary containing 'composite' path and 'ml_bands' dict.
@@ -58,14 +59,21 @@ def download_data(aoi: dict, time_range: dict, output_dir: str, mode: str = "moc
             logger.info(f"Found {len(items)} scenes. Processing the most recent one...")
             item = items[0]  # most recent (STAC returns newest first)
             
-            # Load Composite data for Dashboard (Blue, Green, Red, NIR)
+            if progress_callback:
+                progress_callback(10)
+            
+            # Load all required bands in one pass for efficiency
+            # We load only the first item [item] instead of the whole list [items]
             ds = odc.stac.load(
-                items,
-                bands=["blue", "green", "red", "nir"],
+                [item],
+                bands=["blue", "green", "red", "nir", "scl"],
                 bbox=bbox,
                 crs="EPSG:4326",
                 resolution=0.0001
             )
+            
+            if progress_callback:
+                progress_callback(20)
             
             if "time" in ds.dims:
                 ds = ds.isel(time=0)
@@ -73,34 +81,30 @@ def download_data(aoi: dict, time_range: dict, output_dir: str, mode: str = "moc
             composite_filename = f"sentinel2_{item.id}.tif"
             composite_filepath = os.path.join(output_dir, composite_filename)
             
-            # Convert to DataArray and save
-            da = ds.to_array(dim="band")
-            da.rio.to_raster(composite_filepath)
+            # Save composite for Dashboard (Blue, Green, Red, NIR)
+            ds_composite = ds[["blue", "green", "red", "nir"]]
+            da_composite = ds_composite.to_array(dim="band")
+            da_composite.rio.to_raster(composite_filepath)
             
-            # --- Load Individual Bands for ML (including SCL) ---
-            # We load them separately or extracting from a larger fetch to ensure we get SCL
-            ds_ml = odc.stac.load(
-                items,
-                bands=["blue", "green", "red", "nir", "scl"],
-                bbox=bbox,
-                crs="EPSG:4326",
-                resolution=0.0001
-            )
-            if "time" in ds_ml.dims:
-                ds_ml = ds_ml.isel(time=0)
-
+            if progress_callback:
+                progress_callback(25)
+            
+            # --- Save Individual Bands for ML ---
             ml_band_paths = {}
             band_map = {
                 "blue": "b2", "green": "b3", "red": "b4", "nir": "b8", "scl": "scl"
             }
 
-            for stac_name, ml_name in band_map.items():
+            for i, (stac_name, ml_name) in enumerate(band_map.items()):
                 band_filename = f"sentinel2_{item.id}_{ml_name}.tif"
                 band_filepath = os.path.join(output_dir, band_filename)
-                ds_ml[stac_name].rio.to_raster(band_filepath)
+                ds[stac_name].rio.to_raster(band_filepath)
                 ml_band_paths[ml_name] = band_filepath
+                
+                if progress_callback:
+                    progress_callback(25 + i + 1)
             
-            logger.success(f"Downloaded real data to {composite_filepath}")
+            logger.success(f"Downloaded real data for item {item.id} to {composite_filepath}")
             return {
                 "composite": composite_filepath,
                 "ml_bands": ml_band_paths,
