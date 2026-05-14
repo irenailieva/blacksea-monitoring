@@ -2,7 +2,7 @@
  * @typedef {Object} User
  * @property {number} id
  * @property {string} email
- * @property {'viewer' | 'analyst' | 'admin'} role
+ * @property {'viewer' | 'researcher' | 'admin'} role
  * @property {{default_region_id: number, notifications: boolean}} [preferences]
  */
 
@@ -47,7 +47,7 @@
 
 export const ROLES = {
   VIEWER: 'viewer',
-  ANALYST: 'analyst',
+  RESEARCHER: 'researcher',
   ADMIN: 'admin',
 };
 

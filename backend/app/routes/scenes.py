@@ -91,7 +91,7 @@ router = APIRouter(prefix="/scenes", tags=["scenes"])
 def create_scene(
     scene_in: schemas.SceneCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_any_role("analyst", "admin"))
+    current_user: User = Depends(require_any_role("researcher", "admin"))
 ):
     """Създава нова сцена. Изисква researcher или admin роля."""
     return crud_scene.create(db=db, obj_in=scene_in)
@@ -145,7 +145,7 @@ def update_scene(
     scene_id: int,
     scene_in: schemas.SceneUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_any_role("analyst", "admin"))
+    current_user: User = Depends(require_any_role("researcher", "admin"))
 ):
     """Обновява сцена. Изисква researcher или admin роля."""
     db_scene = crud_scene.get(db=db, id=scene_id)
@@ -179,7 +179,7 @@ async def upload_scene_file(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_any_role("analyst", "admin"))
+    current_user: User = Depends(require_any_role("researcher", "admin"))
 ):
     """Upload a GeoTIFF and queue it for ML inference.
     Re-uploading the same filename is supported — a timestamp suffix
@@ -238,7 +238,7 @@ async def upload_scene_file(
 @router.post("/etl-trigger", response_model=schemas.ETLJobRead)
 async def trigger_automated_etl(
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_any_role("analyst", "admin"))
+    current_user: User = Depends(require_any_role("researcher", "admin"))
 ):
     """Triggers the automated Sentinel-2 ETL pipeline."""
     job_in = schemas.ETLJobCreate(
@@ -264,7 +264,7 @@ async def trigger_automated_etl(
 async def analyze_aoi(
     request: schemas.AoiAnalysisRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_any_role("analyst", "admin"))
+    current_user: User = Depends(require_any_role("researcher", "admin"))
 ):
     """
     User-driven AOI analysis flow.
@@ -315,7 +315,7 @@ async def retry_etl_job(
     job_id: int,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_any_role("analyst", "admin"))
+    current_user: User = Depends(require_any_role("researcher", "admin"))
 ):
     """Retry a failed or stuck ETL job.
     - manual_upload: re-runs ML inference on the original file (no re-upload needed).

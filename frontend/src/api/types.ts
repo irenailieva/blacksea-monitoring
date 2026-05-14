@@ -5,7 +5,7 @@ export interface User {
     id: number;
     username: string;
     email?: string;
-    role: 'viewer' | 'analyst' | 'admin';
+    role: 'viewer' | 'researcher' | 'admin';
     preferences?: {
         default_region_id: number;
         notifications: boolean;

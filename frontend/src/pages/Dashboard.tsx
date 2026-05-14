@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import useAuth from '../store/useAuth';
 import AppMap from '../components/Map/Map';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,6 +22,8 @@ interface ActiveJob {
 
 // ── component ──────────────────────────────────────────────────────────────────
 export default function Dashboard() {
+    const { user } = useAuth();
+    const canAnalyze = user?.role === 'researcher' || user?.role === 'admin';
     const [regions, setRegions] = useState<Region[]>([]);
     const [scenes, setScenes] = useState<Scene[]>([]);
     const [selectedScene, setSelectedScene] = useState<Scene | null>(null);
@@ -147,7 +150,7 @@ export default function Dashboard() {
     }
 
     return (
-        <div className="flex h-full flex-col space-y-4">
+        <div className="flex h-full flex-col space-y-4 overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <h2 className="text-3xl font-bold tracking-tight">Monitoring Map</h2>
@@ -157,7 +160,7 @@ export default function Dashboard() {
                 </div>
             </div>
 
-            <div className="grid h-full grid-cols-1 gap-4 lg:grid-cols-4">
+            <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-4">
                 {/* ── Sidebar ── */}
                 <div className="space-y-4 lg:col-span-1 overflow-y-auto pr-1">
 
@@ -297,13 +300,13 @@ export default function Dashboard() {
                 </div>
 
                 {/* ── Map ── */}
-                <div className="lg:col-span-3 min-h-[600px]">
+                <div className="lg:col-span-3 min-h-0">
                     <Card className="h-full">
                         <CardContent className="p-0 h-full">
                             <AppMap
                                 regions={regions}
                                 selectedSceneUrl={selectedSceneUrl}
-                                onAoiSubmit={handleAoiSubmit}
+                                onAoiSubmit={canAnalyze ? handleAoiSubmit : undefined}
                             />
                         </CardContent>
                     </Card>

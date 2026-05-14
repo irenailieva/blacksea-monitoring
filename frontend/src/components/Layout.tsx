@@ -18,7 +18,7 @@ interface NavigationItem {
     name: string;
     href: string;
     icon: LucideIcon;
-    role?: string;
+    roles?: string[];
 }
 
 export default function Layout() {
@@ -29,24 +29,19 @@ export default function Layout() {
     const navigation: NavigationItem[] = [
         { name: 'Map', href: '/', icon: Map },
         { name: 'Analysis', href: '/analysis', icon: LayoutDashboard },
-        { name: 'Data', href: '/data', icon: Archive },
-        { name: 'Admin', href: '/admin', icon: Users, role: 'admin' },
+        { name: 'Data', href: '/data', icon: Archive, roles: ['researcher', 'admin'] },
+        { name: 'Admin', href: '/admin', icon: Users, roles: ['admin'] },
     ];
 
-    const filteredNav = navigation.filter(item => !item.role || (user && user.role === item.role) || !user);
+    const filteredNav = navigation.filter(item =>
+        !item.roles || (user && item.roles.includes(user.role)) || !user
+    );
 
     return (
         <div className="flex min-h-screen w-full flex-col">
             <header className="sticky top-0 z-[99999] flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6 shadow-sm">
                 <div id="header-portal-root" className="absolute top-0 left-0 w-0 h-0" />
                 <nav className="hidden flex-col gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6">
-                    <Link
-                        to="/"
-                        className="flex items-center gap-2 text-lg font-semibold md:text-base"
-                    >
-                        <img src="/logo.svg" alt="Black Sea Monitor" className="h-8 w-auto" />
-                        <span className="sr-only">Black Sea Monitor</span>
-                    </Link>
                     {filteredNav.map((item) => (
                         <Link
                             key={item.name}
@@ -71,13 +66,6 @@ export default function Layout() {
                     </SheetTrigger>
                     <SheetContent side="left">
                         <nav className="grid gap-6 text-lg font-medium">
-                            <Link
-                                to="/"
-                                className="flex items-center gap-2 text-lg font-semibold"
-                            >
-                                <img src="/logo.svg" alt="Black Sea Monitor" className="h-8 w-auto" />
-                                <span className="sr-only">Black Sea Monitor</span>
-                            </Link>
                             {filteredNav.map((item) => (
                                 <Link
                                     key={item.name}
@@ -160,7 +148,7 @@ export default function Layout() {
                     </DropdownMenu>
                 </div>
             </header>
-            <main className="relative z-0 flex min-h-[calc(100vh_-_theme(spacing.16))] flex-1 flex-col gap-4 bg-muted/40 p-4 md:gap-8 md:p-10">
+            <main className="relative z-0 flex h-[calc(100vh-4rem)] flex-col gap-4 bg-muted/40 p-4 md:gap-8 md:p-10 overflow-hidden">
                 <Outlet />
             </main>
         </div>
