@@ -337,12 +337,7 @@ export default function Dashboard() {
                         </Badge>
                     </div>
                     <SceneAnalysis scene={selectedScene} />
-                    <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-3">
-                        <div className="lg:col-span-2">
-                            <Card className="h-[300px] flex items-center justify-center p-6 text-muted-foreground bg-muted/20">
-                                Select a region on the Analysis page to view historical vegetation trends.
-                            </Card>
-                        </div>
+                    <div className="grid gap-4">
                         <ShapExplanation sceneId={selectedScene.id} />
                     </div>
                 </div>

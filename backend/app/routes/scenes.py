@@ -278,7 +278,21 @@ async def analyze_aoi(
     the classification result in the DB.
     """
     bbox = request.bbox
-    aoi_name = request.aoi_name or f"aoi_{bbox[0]:.3f}_{bbox[1]:.3f}"
+    
+    from sqlalchemy import func
+    from app.models.region import Region
+    intersecting_region = db.query(Region).filter(
+        ~Region.name.like("AOI_%"),
+        func.ST_Intersects(
+            Region.geometry,
+            func.ST_MakeEnvelope(bbox[0], bbox[1], bbox[2], bbox[3], 4326)
+        )
+    ).first()
+    
+    if intersecting_region:
+        aoi_name = intersecting_region.name
+    else:
+        aoi_name = request.aoi_name or f"aoi_{bbox[0]:.3f}_{bbox[1]:.3f}"
 
     job_in = schemas.ETLJobCreate(
         job_type="aoi_analysis",

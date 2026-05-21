@@ -146,19 +146,6 @@ export default function Analysis() {
                 <VegetationChart regionId={selectedRegion ? Number(selectedRegion) : null} />
                 <ShapExplanation regionId={selectedRegion} />
             </div>
-
-            <div className="grid gap-4 md:grid-cols-1">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Detailed Report</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="rounded-md border p-4 text-sm text-center text-muted-foreground bg-muted/20">
-                            Table of specific classification results per scene will go here.
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
         </div>
     );
 }
