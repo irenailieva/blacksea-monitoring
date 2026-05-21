@@ -17,7 +17,7 @@ from backend.app.models.shap_value import ShapValue
 from backend.app.models.model_run import ModelRun
 from backend.app.models.index_type import IndexType
 
-def upload_to_db(file_path: str, db_url: str, aoi_config: dict, scene_id: str = None, acquisition_date: date = None, cloud_cover: float = 0.0, stats: dict = None, shap_data: list = None):
+def upload_to_db(file_path: str, db_url: str, aoi_config: dict, scene_id: str = None, acquisition_date: date = None, cloud_cover: float = 0.0, stats: dict = None, shap_data: list = None, display_name: str = None):
     """
     Uploads metadata of the processed file to PostGIS using the backend schema.
     
@@ -93,7 +93,8 @@ def upload_to_db(file_path: str, db_url: str, aoi_config: dict, scene_id: str = 
                     acquisition_date=acquisition_date or datetime.utcnow().date(),
                     satellite="Sentinel-2",
                     region_id=region.id,
-                    cloud_cover=cloud_cover
+                    cloud_cover=cloud_cover,
+                    display_name=display_name
                 )
                 session.add(scene)
                 session.commit()

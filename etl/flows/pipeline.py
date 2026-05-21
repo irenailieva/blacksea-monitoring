@@ -63,7 +63,7 @@ def load_config():
             raise ValueError(f"Config file at {config_path} is empty or malformed.")
         return config
 
-def run_pipeline(job_id=None, bbox=None, aoi_name=None, cloud_max=None):
+def run_pipeline(job_id=None, bbox=None, aoi_name=None, cloud_max=None, display_name=None):
     logger.info(f"Starting ETL pipeline (Job ID: {job_id})")
     
     config = load_config()
@@ -199,13 +199,13 @@ def run_pipeline(job_id=None, bbox=None, aoi_name=None, cloud_max=None):
         scene_id_override = f"{scene_id_override}_job{job_id}"
         real_cloud_cover = download_result.get("cloud_cover", 0.0)
 
-        upload_to_db(raw_file, db_url, effective_aoi, scene_id=scene_id_override, acquisition_date=real_acquisition_date, cloud_cover=real_cloud_cover)
+        upload_to_db(raw_file, db_url, effective_aoi, scene_id=scene_id_override, acquisition_date=real_acquisition_date, cloud_cover=real_cloud_cover, display_name=display_name)
         update_job_status(engine, job_id, 'processing', 75)
         
-        upload_to_db(processed_file, db_url, effective_aoi, scene_id=scene_id_override, acquisition_date=real_acquisition_date, cloud_cover=real_cloud_cover)
+        upload_to_db(processed_file, db_url, effective_aoi, scene_id=scene_id_override, acquisition_date=real_acquisition_date, cloud_cover=real_cloud_cover, display_name=display_name)
         update_job_status(engine, job_id, 'processing', 80)
         
-        upload_to_db(ndvi_file, db_url, effective_aoi, scene_id=scene_id_override, acquisition_date=real_acquisition_date, cloud_cover=real_cloud_cover)
+        upload_to_db(ndvi_file, db_url, effective_aoi, scene_id=scene_id_override, acquisition_date=real_acquisition_date, cloud_cover=real_cloud_cover, display_name=display_name)
         update_job_status(engine, job_id, 'processing', 90)
         
         # 5. ML Inference
@@ -264,7 +264,8 @@ def run_pipeline(job_id=None, bbox=None, aoi_name=None, cloud_max=None):
                     scene_id=scene_id_override, 
                     acquisition_date=real_acquisition_date,
                     stats=stats,
-                    shap_data=shap_data
+                    shap_data=shap_data,
+                    display_name=display_name
                 )
                 logger.success("ETL Pipeline completed successfully!")
                 update_job_status(engine, job_id, 'completed', 100)

@@ -15,6 +15,7 @@ class TriggerRequest(BaseModel):
     job_id: int
     bbox: Optional[List[float]] = None   # [minLon, minLat, maxLon, maxLat]
     aoi_name: Optional[str] = None
+    display_name: Optional[str] = None
     cloud_max: Optional[int] = 20
 
 @app.post("/trigger")
@@ -25,6 +26,7 @@ def trigger_etl(req: TriggerRequest, bg_tasks: BackgroundTasks):
         job_id=req.job_id,
         bbox=req.bbox,
         aoi_name=req.aoi_name,
+        display_name=req.display_name,
         cloud_max=req.cloud_max,
     )
     return {"status": "started", "job_id": req.job_id}

@@ -6,7 +6,7 @@ import { Crosshair, X } from 'lucide-react';
 export type BBox = [number, number, number, number]; // [minLon, minLat, maxLon, maxLat]
 
 interface AoiDrawToolProps {
-    onAoiConfirm: (bbox: BBox, aoi_name: string) => void;
+    onAoiConfirm: (bbox: BBox, aoi_name: string, display_name?: string) => void;
 }
 
 export default function AoiDrawTool({ onAoiConfirm }: AoiDrawToolProps) {
@@ -14,6 +14,7 @@ export default function AoiDrawTool({ onAoiConfirm }: AoiDrawToolProps) {
     const [drawing, setDrawing] = useState(false);
     const [drawnRect, setDrawnRect] = useState<L.Rectangle | null>(null);
     const [drawnBbox, setDrawnBbox] = useState<BBox | null>(null);
+    const [displayName, setDisplayName] = useState('');
     const startLatLng = useRef<L.LatLng | null>(null);
     const rectRef = useRef<L.Rectangle | null>(null);
 
@@ -30,6 +31,7 @@ export default function AoiDrawTool({ onAoiConfirm }: AoiDrawToolProps) {
         drawnRect?.remove();
         setDrawnRect(null);
         setDrawnBbox(null);
+        setDisplayName('');
     };
 
     const startDrawing = () => {
@@ -99,7 +101,7 @@ export default function AoiDrawTool({ onAoiConfirm }: AoiDrawToolProps) {
     const confirmAoi = () => {
         if (!drawnBbox) return;
         const name = `AOI_${drawnBbox[0].toFixed(3)}_${drawnBbox[1].toFixed(3)}`;
-        onAoiConfirm(drawnBbox, name);
+        onAoiConfirm(drawnBbox, name, displayName || undefined);
         clearRect();
     };
 
@@ -158,48 +160,79 @@ export default function AoiDrawTool({ onAoiConfirm }: AoiDrawToolProps) {
                     {drawnBbox && !drawing && (
                         <div style={{
                             display: 'flex',
-                            alignItems: 'center',
+                            flexDirection: 'column',
                             gap: '8px',
-                            flexWrap: 'wrap',
-                            maxWidth: '260px',
+                            background: 'white',
+                            border: '2px solid #3b82f6',
+                            borderRadius: '6px',
+                            padding: '10px',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                            width: '260px',
+                            pointerEvents: 'auto',
                         }}>
-                            <button
-                                onClick={confirmAoi}
+                            <div style={{ fontSize: '11px', fontWeight: 600, color: '#374151' }}>
+                                Scene Display Name (optional):
+                            </div>
+                            <input
+                                type="text"
+                                value={displayName}
+                                onChange={(e) => setDisplayName(e.target.value)}
+                                placeholder="e.g. Lake Vaya"
                                 style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '6px',
-                                    background: '#1d4ed8',
-                                    border: 'none',
-                                    borderRadius: '6px',
-                                    padding: '6px 14px',
+                                    width: '100%',
+                                    padding: '4px 8px',
                                     fontSize: '12px',
-                                    fontWeight: 700,
-                                    color: 'white',
-                                    cursor: 'pointer',
-                                    boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                                }}
-                            >
-                                ✓ Analyze this area
-                            </button>
-                            <button
-                                onClick={() => { clearRect(); }}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '4px',
-                                    background: 'white',
                                     border: '1px solid #d1d5db',
-                                    borderRadius: '6px',
-                                    padding: '6px 10px',
-                                    fontSize: '12px',
-                                    color: '#6b7280',
-                                    cursor: 'pointer',
-                                    boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
+                                    borderRadius: '4px',
+                                    color: '#1f2937',
+                                    outline: 'none',
                                 }}
-                            >
-                                <X size={12} /> Redraw
-                            </button>
+                            />
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                width: '100%',
+                            }}>
+                                <button
+                                    onClick={confirmAoi}
+                                    style={{
+                                        flex: 1,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '6px',
+                                        background: '#1d4ed8',
+                                        border: 'none',
+                                        borderRadius: '6px',
+                                        padding: '6px 10px',
+                                        fontSize: '12px',
+                                        fontWeight: 700,
+                                        color: 'white',
+                                        cursor: 'pointer',
+                                    }}
+                                >
+                                    ✓ Analyze
+                                </button>
+                                <button
+                                    onClick={clearRect}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '4px',
+                                        background: 'white',
+                                        border: '1px solid #d1d5db',
+                                        borderRadius: '6px',
+                                        padding: '6px 10px',
+                                        fontSize: '12px',
+                                        color: '#6b7280',
+                                        cursor: 'pointer',
+                                    }}
+                                >
+                                    Cancel
+                                </button>
+                            </div>
                         </div>
                     )}
                 </div>

@@ -34,6 +34,7 @@ export interface Region {
 export interface Scene {
     id: number;
     scene_id: string;
+    display_name?: string;
     acquisition_date: string; // ISO Date String
     cloud_cover?: number;
     satellite: string;

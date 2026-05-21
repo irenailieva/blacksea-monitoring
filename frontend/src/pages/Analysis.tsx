@@ -26,9 +26,10 @@ export default function Analysis() {
         const fetchRegions = async () => {
             try {
                 const response = await api.get<Region[]>('/regions');
-                setRegions(response.data);
-                if (response.data.length > 0) {
-                    setSelectedRegion(response.data[0].id.toString());
+                const filteredRegions = response.data.filter(r => !r.name.startsWith('AOI_'));
+                setRegions(filteredRegions);
+                if (filteredRegions.length > 0) {
+                    setSelectedRegion(filteredRegions[0].id.toString());
                 }
             } catch (error) {
                 console.error('Failed to fetch regions:', error);
@@ -66,9 +67,9 @@ export default function Analysis() {
         const regionName = regions.find(r => r.id.toString() === selectedRegion)?.name || 'Unknown Region';
         const headers = ["Region", "Metric", "Value", "Trend"];
         const rows = [
-            [regionName, "Total Vegetation Area (m²)", "12345", "+2.5%"],
-            [regionName, "Average Confidence Score (%)", "94.8", "+0.2%"],
-            [regionName, "Active Anomalies", "3", "-1"]
+            [regionName, "Total Vegetation Area (km²)", (stats.total_vegetation_area_m2 / 1_000_000).toFixed(2), `${stats.vegetation_trend_percent > 0 ? '+' : ''}${stats.vegetation_trend_percent}%`],
+            [regionName, "Average Confidence Score (%)", stats.avg_confidence.toString(), `${stats.confidence_trend_percent > 0 ? '+' : ''}${stats.confidence_trend_percent}%`],
+            [regionName, "Active Anomalies", stats.active_anomalies.toString(), `${stats.anomalies_trend > 0 ? '+' : ''}${stats.anomalies_trend}`]
         ];
         
         const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
@@ -111,7 +112,7 @@ export default function Analysis() {
                         <CardTitle className="text-sm font-medium">Total Vegetation Area</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{stats.total_vegetation_area_m2.toLocaleString()} m²</div>
+                        <div className="text-2xl font-bold">{(stats.total_vegetation_area_m2 / 1_000_000).toLocaleString(undefined, { maximumFractionDigits: 2 })} km²</div>
                         <p className="text-xs text-muted-foreground">
                             {stats.vegetation_trend_percent > 0 ? '+' : ''}{stats.vegetation_trend_percent}% from last scene
                         </p>

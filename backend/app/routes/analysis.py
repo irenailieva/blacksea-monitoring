@@ -44,21 +44,26 @@ def get_vegetation_trend(
 
 @router.get("/shap-values")
 def get_shap_values(
-    region_id: int,
+    region_id: int = None,
+    scene_id: int = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # Get the latest scene for this region that has SHAP values
-    latest_scene_with_shap = db.query(Scene)\
-        .join(ShapValue, Scene.id == ShapValue.scene_id)\
-        .filter(Scene.region_id == region_id)\
-        .order_by(Scene.acquisition_date.desc())\
-        .first()
-        
-    if not latest_scene_with_shap:
+    if scene_id:
+        target_scene = db.query(Scene).filter(Scene.id == scene_id).first()
+    elif region_id:
+        target_scene = db.query(Scene)\
+            .join(ShapValue, Scene.id == ShapValue.scene_id)\
+            .filter(Scene.region_id == region_id)\
+            .order_by(Scene.acquisition_date.desc())\
+            .first()
+    else:
         return []
         
-    shap_vals = db.query(ShapValue).filter(ShapValue.scene_id == latest_scene_with_shap.id).all()
+    if not target_scene:
+        return []
+        
+    shap_vals = db.query(ShapValue).filter(ShapValue.scene_id == target_scene.id).all()
     
     return [
         { "feature": sv.feature_name, "value": sv.value }
@@ -67,31 +72,46 @@ def get_shap_values(
 
 @router.get("/stats")
 def get_stats(
-    region_id: int,
+    region_id: int = None,
+    scene_id: int = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # Get the two most recent scenes with classification results for trend comparison
-    recent_scenes = db.query(Scene)\
-        .join(ClassificationResult, Scene.id == ClassificationResult.scene_id)\
-        .filter(Scene.region_id == region_id)\
-        .group_by(Scene.id)\
-        .order_by(Scene.acquisition_date.desc())\
-        .limit(2)\
-        .all()
-        
-    if not recent_scenes:
-        return {
-           "total_vegetation_area_m2": 0,
-           "vegetation_trend_percent": 0.0,
-           "avg_confidence": 0.0,
-           "confidence_trend_percent": 0.0,
-           "active_anomalies": 0,
-           "anomalies_trend": 0
-        }
-        
-    latest_scene = recent_scenes[0]
-    previous_scene = recent_scenes[1] if len(recent_scenes) > 1 else None
+    empty_stats = {
+        "total_vegetation_area_m2": 0,
+        "vegetation_trend_percent": 0.0,
+        "avg_confidence": 0.0,
+        "confidence_trend_percent": 0.0,
+        "active_anomalies": 0,
+        "anomalies_trend": 0
+    }
+
+    latest_scene = None
+    previous_scene = None
+
+    if scene_id:
+        latest_scene = db.query(Scene).filter(Scene.id == scene_id).first()
+        if latest_scene:
+            previous_scene = db.query(Scene)\
+                .join(ClassificationResult, Scene.id == ClassificationResult.scene_id)\
+                .filter(Scene.region_id == latest_scene.region_id)\
+                .filter(Scene.acquisition_date < latest_scene.acquisition_date)\
+                .order_by(Scene.acquisition_date.desc())\
+                .first()
+    elif region_id:
+        recent_scenes = db.query(Scene)\
+            .join(ClassificationResult, Scene.id == ClassificationResult.scene_id)\
+            .filter(Scene.region_id == region_id)\
+            .group_by(Scene.id)\
+            .order_by(Scene.acquisition_date.desc())\
+            .limit(2)\
+            .all()
+        if recent_scenes:
+            latest_scene = recent_scenes[0]
+            previous_scene = recent_scenes[1] if len(recent_scenes) > 1 else None
+
+    if not latest_scene:
+        return empty_stats
     
     def get_metrics_for_scene(scene_id):
         crs = db.query(ClassificationResult).filter(ClassificationResult.scene_id == scene_id).all()

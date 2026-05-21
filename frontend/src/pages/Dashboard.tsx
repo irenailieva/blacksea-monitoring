@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import useAuth from '../store/useAuth';
 import AppMap from '../components/Map/Map';
+import { SceneAnalysis } from '@/components/Analysis/SceneAnalysis';
+import { ShapExplanation } from '@/components/Analysis/ShapExplanation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, Layers, Image as ImageIcon, RefreshCw, CheckCircle2, AlertCircle, Clock, Satellite } from 'lucide-react';
@@ -120,16 +122,17 @@ export default function Dashboard() {
     }, [fetchScenes]);
 
     // ── AOI submit ───────────────────────────────────────────────────────────
-    const handleAoiSubmit = useCallback(async (bbox: BBox, aoi_name: string) => {
+    const handleAoiSubmit = useCallback(async (bbox: BBox, aoi_name: string, display_name?: string) => {
         try {
             const res = await api.post('/scenes/analyze-aoi', {
                 bbox,
                 aoi_name,
+                display_name,
                 cloud_max: 30,
             });
             setActiveJob({
                 job_id: res.data.job_id,
-                aoi_name,
+                aoi_name: display_name || aoi_name,
                 bbox,
                 status: 'pending',
                 progress: 0,
@@ -159,7 +162,7 @@ export default function Dashboard() {
     }
 
     return (
-        <div className="flex h-full flex-col space-y-4 overflow-hidden">
+        <div className="flex h-full flex-col space-y-4 overflow-y-auto pr-2 pb-6">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <h2 className="text-3xl font-bold tracking-tight">Monitoring Map</h2>
@@ -169,7 +172,7 @@ export default function Dashboard() {
                 </div>
             </div>
 
-            <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-4">
+            <div className="grid min-h-[600px] grid-cols-1 gap-4 lg:grid-cols-4">
                 {/* ── Sidebar ── */}
                 <div className="space-y-4 lg:col-span-1 overflow-y-auto pr-1">
 
@@ -273,8 +276,10 @@ export default function Dashboard() {
                                                     : ''
                                             }`}
                                         >
-                                            <div className="flex flex-col gap-1">
-                                                <span className="text-xs font-mono font-bold truncate">{scene.scene_id}</span>
+                                            <div className="flex flex-col gap-1 min-w-0">
+                                                <span className={`text-xs font-bold truncate block ${scene.display_name ? 'font-sans' : 'font-mono'}`}>
+                                                    {scene.display_name || scene.scene_id}
+                                                </span>
                                                 <div className="flex items-center justify-between">
                                                     <span className="text-[10px] text-muted-foreground">
                                                         {scene.acquisition_date}
@@ -321,6 +326,27 @@ export default function Dashboard() {
                     </Card>
                 </div>
             </div>
+
+            {/* Scene Analysis Section */}
+            {selectedScene && (
+                <div className="flex flex-col space-y-4 pt-6 border-t mt-6">
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-2xl font-bold tracking-tight">Scene Analysis: {selectedScene.display_name || selectedScene.scene_id}</h3>
+                        <Badge variant="outline" className="text-xs">
+                            {selectedScene.acquisition_date}
+                        </Badge>
+                    </div>
+                    <SceneAnalysis scene={selectedScene} />
+                    <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-3">
+                        <div className="lg:col-span-2">
+                            <Card className="h-[300px] flex items-center justify-center p-6 text-muted-foreground bg-muted/20">
+                                Select a region on the Analysis page to view historical vegetation trends.
+                            </Card>
+                        </div>
+                        <ShapExplanation sceneId={selectedScene.id} />
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

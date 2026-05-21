@@ -287,6 +287,7 @@ async def analyze_aoi(
             "progress": 0,
             "bbox": bbox,
             "aoi_name": aoi_name,
+            "display_name": request.display_name,
             "cloud_max": request.cloud_max,
         }
     )
@@ -300,6 +301,7 @@ async def analyze_aoi(
                     "job_id": db_job.id,
                     "bbox": bbox,
                     "aoi_name": aoi_name,
+                    "display_name": request.display_name,
                     "cloud_max": request.cloud_max,
                 }
             )

@@ -18,6 +18,7 @@ class Scene(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     scene_id: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    display_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     acquisition_date: Mapped[Date] = mapped_column(Date, nullable=False)
     satellite: Mapped[str] = mapped_column(String(50), nullable=False, default="Sentinel-2")
     cloud_cover: Mapped[float | None] = mapped_column(Float, nullable=True)

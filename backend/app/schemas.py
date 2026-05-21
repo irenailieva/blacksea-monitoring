@@ -68,6 +68,7 @@ class RegionRead(RegionBase):
 
 class SceneBase(BaseSchema):
     scene_id: str = Field(..., min_length=1, max_length=100)
+    display_name: Optional[str] = Field(None, max_length=100)
     acquisition_date: date
     satellite: str = Field(default="Sentinel-2", max_length=50)
     cloud_cover: Optional[float] = Field(None, ge=0, le=100)
@@ -301,6 +302,7 @@ class AoiAnalysisRequest(BaseSchema):
         description="[minLon, minLat, maxLon, maxLat]"
     )
     aoi_name: Optional[str] = Field(None, max_length=100)
+    display_name: Optional[str] = Field(None, max_length=100)
     cloud_max: Optional[int] = Field(20, ge=0, le=100)
 
 

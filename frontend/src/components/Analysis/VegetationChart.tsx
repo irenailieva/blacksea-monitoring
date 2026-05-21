@@ -46,7 +46,7 @@ export function VegetationChart({ regionId }: VegetationChartProps) {
                     <div>
                         <CardTitle>Vegetation Trends</CardTitle>
                         <CardDescription>
-                            Area coverage (m²) over time
+                            Area coverage (km²) over time
                         </CardDescription>
                     </div>
                     {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
@@ -55,7 +55,7 @@ export function VegetationChart({ regionId }: VegetationChartProps) {
             <CardContent className="pb-4">
                 <div className="h-[300px]">
                     <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={trendData.length > 0 ? trendData : []} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
+                        <LineChart data={trendData.length > 0 ? trendData.map(d => ({ ...d, vegetation: Number((d.vegetation / 1_000_000).toFixed(2)), sand: Number((d.sand / 1_000_000).toFixed(2)) })) : []} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
                             <XAxis
                                 dataKey="date"
@@ -69,7 +69,7 @@ export function VegetationChart({ regionId }: VegetationChartProps) {
                                 fontSize={12}
                                 tickLine={false}
                                 axisLine={false}
-                                tickFormatter={(value) => `${value}m²`}
+                                tickFormatter={(value) => `${value}km²`}
                             />
                             <Tooltip
                                 contentStyle={{ backgroundColor: 'white', borderRadius: '8px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}

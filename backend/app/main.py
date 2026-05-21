@@ -31,6 +31,15 @@ async def lifespan(app: FastAPI):
     """Startup: create tables and resolve any stale ETL jobs left over from a crash."""
     Base.metadata.create_all(bind=engine)
 
+    # Ensure display_name column exists
+    from sqlalchemy import text
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE scenes ADD COLUMN IF NOT EXISTS display_name VARCHAR(100);"))
+        print("[Lifespan] Added display_name column to scenes table if it did not exist.")
+    except Exception as e:
+        print(f"[Lifespan] Error checking/adding display_name column: {e}")
+
     db = SessionLocal()
     try:
         cutoff = datetime.utcnow() - timedelta(minutes=STALE_THRESHOLD_MINUTES)

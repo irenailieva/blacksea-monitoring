@@ -23,7 +23,7 @@ import AoiDrawTool, { BBox } from './AoiDrawTool';
 interface MapProps {
     regions: Region[];
     selectedSceneUrl?: string;
-    onAoiSubmit?: (bbox: BBox, aoi_name: string) => void;
+    onAoiSubmit?: (bbox: BBox, aoi_name: string, display_name?: string) => void;
 }
 
 function MapResizer() {

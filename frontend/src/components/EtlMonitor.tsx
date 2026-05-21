@@ -101,7 +101,7 @@ export function EtlMonitor() {
             ) : (
                 jobs.map((job) => {
                     const progress = job.payload?.progress ?? 0;
-                    const label = job.payload?.scene_id_str ?? job.payload?.sentinel_id ?? job.job_type.replace(/_/g, ' ');
+                    const label = job.payload?.display_name ?? job.payload?.scene_id_str ?? job.payload?.sentinel_id ?? job.job_type.replace(/_/g, ' ');
                     const active = isActive(job.status);
 
                     return (
@@ -119,7 +119,7 @@ export function EtlMonitor() {
                         >
                             <div className="flex items-center justify-between">
                                 <div className="flex flex-col gap-0.5 min-w-0">
-                                    <span className="text-xs font-mono font-semibold truncate capitalize">
+                                    <span className="text-xs font-mono font-semibold truncate block capitalize">
                                         {label}
                                     </span>
                                     <span className="text-[10px] text-muted-foreground">

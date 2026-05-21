@@ -12,20 +12,21 @@ interface ShapData {
 
 interface ShapExplanationProps {
     regionId?: string;
+    sceneId?: number;
 }
 
-export function ShapExplanation({ regionId }: ShapExplanationProps) {
+export function ShapExplanation({ regionId, sceneId }: ShapExplanationProps) {
     const [shapData, setShapData] = useState<ShapData[]>([]);
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        if (!regionId) return;
+        if (!regionId && !sceneId) return;
 
         const fetchShap = async () => {
             setLoading(true);
             try {
                 const response = await api.get<ShapData[]>('/analysis/shap-values', {
-                    params: { region_id: regionId }
+                    params: sceneId ? { scene_id: sceneId } : { region_id: regionId }
                 });
                 setShapData(response.data);
             } catch (error) {
@@ -35,7 +36,7 @@ export function ShapExplanation({ regionId }: ShapExplanationProps) {
             }
         };
         fetchShap();
-    }, [regionId]);
+    }, [regionId, sceneId]);
 
     return (
         <Card className="col-span-1 lg:col-span-1">
