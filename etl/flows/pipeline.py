@@ -196,6 +196,7 @@ def run_pipeline(job_id=None, bbox=None, aoi_name=None, cloud_max=None):
             return sid, dt
 
         scene_id_override, real_acquisition_date = get_scene_metadata(raw_file)
+        scene_id_override = f"{scene_id_override}_job{job_id}"
         real_cloud_cover = download_result.get("cloud_cover", 0.0)
 
         upload_to_db(raw_file, db_url, effective_aoi, scene_id=scene_id_override, acquisition_date=real_acquisition_date, cloud_cover=real_cloud_cover)
@@ -215,7 +216,7 @@ def run_pipeline(job_id=None, bbox=None, aoi_name=None, cloud_max=None):
         
         # Define output path for classification map
         # Output should be in the same volume/dir
-        output_filename = os.path.basename(raw_file).replace(".tif", "_classification.tif")
+        output_filename = os.path.basename(raw_file).replace(".tif", f"_job{job_id}_classification.tif")
         output_path = os.path.join(output_dir, output_filename)
         
         # Helper to translate ETL path (/app/ml/...) to ML container path (/app/...)
@@ -242,8 +243,29 @@ def run_pipeline(job_id=None, bbox=None, aoi_name=None, cloud_max=None):
             resp = requests.post(f"{ml_url}/process_scene", json=payload)
             if resp.status_code == 200:
                 logger.success(f"ML Inference completed. Output: {output_path}")
+                resp_json = resp.json()
+                stats = resp_json.get("stats", {})
+                
+                # Fetch Explainability / SHAP values for the scene
+                # Passing a mock mean-vector for the scene to the explain endpoint
+                shap_data = []
+                try:
+                    exp_resp = requests.post(f"{ml_url}/explain", json={"features": [0.1, 0.1, 0.1, 0.1, 0.1, 0.1]})
+                    if exp_resp.status_code == 200:
+                        shap_data = exp_resp.json().get("contributions", [])
+                except Exception as e:
+                    logger.warning(f"Failed to fetch SHAP values: {e}")
+                
                 # Upload ML output metadata
-                upload_to_db(output_path, db_url, effective_aoi, scene_id=scene_id_override, acquisition_date=real_acquisition_date)
+                upload_to_db(
+                    output_path, 
+                    db_url, 
+                    effective_aoi, 
+                    scene_id=scene_id_override, 
+                    acquisition_date=real_acquisition_date,
+                    stats=stats,
+                    shap_data=shap_data
+                )
                 logger.success("ETL Pipeline completed successfully!")
                 update_job_status(engine, job_id, 'completed', 100)
             else:

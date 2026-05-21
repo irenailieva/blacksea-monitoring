@@ -21,6 +21,7 @@ class ClassificationResult(Base):
 
     label: Mapped[str] = mapped_column(String(100), nullable=False)
     confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    area_m2: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     model_run: Mapped[Optional["ModelRun"]] = relationship(back_populates="classification_results")
     scene: Mapped["Scene"] = relationship(back_populates="classification_results")

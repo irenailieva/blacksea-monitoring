@@ -72,7 +72,10 @@ def process_scene(band_paths: dict, output_path: str, model):
                     print(".", end="", flush=True)
 
         print(f"\n🎉 Single-file Map generated at {output_path}")
-        return
+        # 🔥 BAKE HIGH-PERFORMANCE PNG
+        png_path = output_path.replace(".tif", ".png")
+        stats = bake_png(output_path, png_path)
+        return stats
 
     print(f"🔄 Processing multi-file Sentinel-2 scene...")
 
@@ -167,7 +170,8 @@ def process_scene(band_paths: dict, output_path: str, model):
     
     # 🔥 BAKE HIGH-PERFORMANCE PNG
     png_path = output_path.replace(".tif", ".png")
-    bake_png(output_path, png_path)
+    stats = bake_png(output_path, png_path)
+    return stats
 
 def bake_png(tif_path: str, png_path: str):
     """
@@ -198,3 +202,12 @@ def bake_png(tif_path: str, png_path: str):
         img = Image.fromarray(rgba, 'RGBA')
         img.save(png_path, 'PNG')
         print(f"✅ PNG Baked successfully with {np.count_nonzero(algae_mask)} algae pixels.")
+
+        # Sentinel-2 spatial resolution is 10m/px, so 1 px = 100 m²
+        # 10 is sand, 20 is algae, 30 is deep sea
+        return {
+            "vegetation_area_m2": int(np.count_nonzero(algae_mask)) * 100,
+            "sand_area_m2": int(np.count_nonzero(sand_mask)) * 100,
+            "water_area_m2": int(np.count_nonzero(water_mask)) * 100,
+            "avg_confidence": 95.0 # Mocking confidence for now as random forest predict_proba isn't piped through easily
+        }

@@ -12,6 +12,15 @@ export default function Analysis() {
     const [selectedRegion, setSelectedRegion] = useState<string>('');
     const [regions, setRegions] = useState<Region[]>([]);
     const [loading, setLoading] = useState(true);
+    
+    const [stats, setStats] = useState({
+        total_vegetation_area_m2: 0,
+        vegetation_trend_percent: 0,
+        avg_confidence: 0,
+        confidence_trend_percent: 0,
+        active_anomalies: 0,
+        anomalies_trend: 0
+    });
 
     useEffect(() => {
         const fetchRegions = async () => {
@@ -29,6 +38,21 @@ export default function Analysis() {
         };
         fetchRegions();
     }, []);
+
+    useEffect(() => {
+        if (!selectedRegion) return;
+        const fetchStats = async () => {
+            try {
+                const response = await api.get('/analysis/stats', {
+                    params: { region_id: selectedRegion }
+                });
+                setStats(response.data);
+            } catch (error) {
+                console.error('Failed to fetch stats:', error);
+            }
+        };
+        fetchStats();
+    }, [selectedRegion]);
 
     if (loading) {
         return (
@@ -87,8 +111,10 @@ export default function Analysis() {
                         <CardTitle className="text-sm font-medium">Total Vegetation Area</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">12,345 m²</div>
-                        <p className="text-xs text-muted-foreground">+2.5% from last month</p>
+                        <div className="text-2xl font-bold">{stats.total_vegetation_area_m2.toLocaleString()} m²</div>
+                        <p className="text-xs text-muted-foreground">
+                            {stats.vegetation_trend_percent > 0 ? '+' : ''}{stats.vegetation_trend_percent}% from last scene
+                        </p>
                     </CardContent>
                 </Card>
                 <Card>
@@ -96,8 +122,10 @@ export default function Analysis() {
                         <CardTitle className="text-sm font-medium">Avg. Confidence Score</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">94.8%</div>
-                        <p className="text-xs text-muted-foreground">+0.2% from last month</p>
+                        <div className="text-2xl font-bold">{stats.avg_confidence}%</div>
+                        <p className="text-xs text-muted-foreground">
+                            {stats.confidence_trend_percent > 0 ? '+' : ''}{stats.confidence_trend_percent}% from last scene
+                        </p>
                     </CardContent>
                 </Card>
                 <Card>
@@ -105,8 +133,10 @@ export default function Analysis() {
                         <CardTitle className="text-sm font-medium">Active Anomalies</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">3</div>
-                        <p className="text-xs text-muted-foreground">-1 from last week</p>
+                        <div className="text-2xl font-bold">{stats.active_anomalies}</div>
+                        <p className="text-xs text-muted-foreground">
+                            {stats.anomalies_trend > 0 ? '+' : ''}{stats.anomalies_trend} new anomalies
+                        </p>
                     </CardContent>
                 </Card>
             </div>

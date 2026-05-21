@@ -106,11 +106,16 @@ def read_scenes(
     current_user: User = Depends(get_current_user)
 ):
     """Връща списък от сцени. Изисква автентикация."""
+    from app.models.scene import Scene
+    
     print(f"[DEBUG] Fetching scenes for user {current_user.username}, region_id={region_id}")
+    
+    query = db.query(Scene).filter(Scene.classification_results.any())
     if region_id:
-        res = crud_scene.get_by_region(db=db, region_id=region_id, skip=skip, limit=limit)
-    else:
-        res = crud_scene.get_multi(db=db, skip=skip, limit=limit)
+        query = query.filter(Scene.region_id == region_id)
+        
+    res = query.order_by(Scene.acquisition_date.desc()).offset(skip).limit(limit).all()
+    
     print(f"[DEBUG] Returning {len(res)} scenes")
     return res
 

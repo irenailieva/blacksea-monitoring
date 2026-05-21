@@ -116,8 +116,8 @@ def process_scene_endpoint(req: ProcessSceneRequest):
     output_dir.mkdir(parents=True, exist_ok=True)
 
     try:
-        process_scene(band_paths, req.output_path, model)
-        return {"status": "success", "output_path": req.output_path}
+        stats = process_scene(band_paths, req.output_path, model)
+        return {"status": "success", "output_path": req.output_path, "stats": stats}
     except Exception as e:
         import traceback
         detail = f"{type(e).__name__}: {e}\n{traceback.format_exc()}"

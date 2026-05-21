@@ -42,7 +42,7 @@ export default function Dashboard() {
                 ]);
                 setRegions(regionsRes.data);
                 setScenes(scenesRes.data);
-                if (scenesRes.data.length > 0) setSelectedScene(scenesRes.data[scenesRes.data.length - 1]);
+                if (scenesRes.data.length > 0) setSelectedScene(scenesRes.data[0]);
             } catch (e) {
                 console.error('Failed to load initial data:', e);
             } finally {
@@ -56,10 +56,12 @@ export default function Dashboard() {
     const fetchScenes = useCallback(async (silent = false) => {
         if (!silent) setRefreshing(true);
         try {
-            const res = await api.get<Scene[]>('/scenes');
+            const res = await api.get<Scene[]>(`/scenes?_t=${Date.now()}`);
             setScenes(res.data);
+            return res.data;
         } catch (e) {
             console.error('Scene refresh failed:', e);
+            return [];
         } finally {
             setRefreshing(false);
         }
@@ -88,16 +90,23 @@ export default function Dashboard() {
 
                 if (job.status === 'completed') {
                     clearInterval(interval);
-                    await fetchScenes(true);
-                    // Auto-select the newly processed scene
-                    const newRes = await api.get<Scene[]>('/scenes');
-                    const allScenes = newRes.data;
-                    setScenes(allScenes);
-                    // Find scene matching the aoi_name or pick latest
-                    const newest = allScenes[allScenes.length - 1];
-                    if (newest) setSelectedScene(newest);
+                    // Add delay and retry logic to ensure backend DB changes are fully visible
+                    setTimeout(async () => {
+                        let allScenes = await fetchScenes(true);
+                        // if empty, wait and retry once more
+                        if (!allScenes || allScenes.length === 0) {
+                            await new Promise(r => setTimeout(r, 2000));
+                            allScenes = await fetchScenes(true);
+                        }
+                        
+                        if (allScenes && allScenes.length > 0) {
+                            setSelectedScene(allScenes[0]);
+                        }
+                    }, 1500);
                 }
-                if (job.status === 'failed') clearInterval(interval);
+                if (job.status === 'failed') {
+                    clearInterval(interval);
+                }
             } catch {/* silent */}
         }, 3000);
 

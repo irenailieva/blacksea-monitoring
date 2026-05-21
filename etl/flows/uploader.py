@@ -12,9 +12,12 @@ from geoalchemy2 import WKTElement
 from backend.app.models.region import Region
 from backend.app.models.scene import Scene
 from backend.app.models.scene_file import SceneFile
-# We don't need to redefine Base since we are using the models directly
+from backend.app.models.classification_result import ClassificationResult
+from backend.app.models.shap_value import ShapValue
+from backend.app.models.model_run import ModelRun
+from backend.app.models.index_type import IndexType
 
-def upload_to_db(file_path: str, db_url: str, aoi_config: dict, scene_id: str = None, acquisition_date: date = None, cloud_cover: float = 0.0):
+def upload_to_db(file_path: str, db_url: str, aoi_config: dict, scene_id: str = None, acquisition_date: date = None, cloud_cover: float = 0.0, stats: dict = None, shap_data: list = None):
     """
     Uploads metadata of the processed file to PostGIS using the backend schema.
     
@@ -126,6 +129,71 @@ def upload_to_db(file_path: str, db_url: str, aoi_config: dict, scene_id: str = 
             
             session.commit()
             logger.success(f"Metadata uploaded for {filename} (Type: {file_type})")
+            
+            # 4. Insert Stats and SHAP values if this is a classification output
+            if file_type == "CLASSIFICATION" and stats:
+                logger.info("Inserting classification stats and SHAP values...")
+                
+                # Fetch or create a default ModelRun
+                model_run = session.query(ModelRun).first()
+                if not model_run:
+                    model_run = ModelRun(model_name="Ensemble_v1", status="completed")
+                    session.add(model_run)
+                    session.commit()
+                    session.refresh(model_run)
+                
+                # Insert Area stats
+                areas = [
+                    ("vegetation", stats.get("vegetation_area_m2")),
+                    ("sand", stats.get("sand_area_m2")),
+                    ("water", stats.get("water_area_m2"))
+                ]
+                
+                # Clean old results for this scene
+                session.query(ClassificationResult).filter_by(scene_id=scene.id).delete()
+                
+                for label, area in areas:
+                    if area is not None:
+                        cr = ClassificationResult(
+                            model_run_id=model_run.id,
+                            scene_id=scene.id,
+                            region_id=region.id,
+                            label=label,
+                            confidence=stats.get("avg_confidence"),
+                            area_m2=area
+                        )
+                        session.add(cr)
+                
+                # Insert SHAP data
+                if shap_data:
+                    # SHAP features are passed implicitly as B2, B3, B4, B8, NDVI, NDWI
+                    feature_names = ["Blue (B2)", "Green (B3)", "Red (B4)", "NIR (B8)", "NDVI", "NDWI"]
+                    
+                    # Clean old SHAP values for this scene
+                    session.query(ShapValue).filter_by(scene_id=scene.id).delete()
+                    
+                    for idx, val in enumerate(shap_data):
+                        fname = feature_names[idx] if idx < len(feature_names) else f"Feature_{idx}"
+                        
+                        # Get or create IndexType
+                        itype = session.query(IndexType).filter_by(name=fname).first()
+                        if not itype:
+                            itype = IndexType(name=fname, formula="N/A", description="SHAP feature")
+                            session.add(itype)
+                            session.commit()
+                            session.refresh(itype)
+                            
+                        sv = ShapValue(
+                            model_run_id=model_run.id,
+                            scene_id=scene.id,
+                            index_type_id=itype.id,
+                            feature_name=fname,
+                            value=val
+                        )
+                        session.add(sv)
+                
+                session.commit()
+                logger.success("Stats and SHAP values inserted.")
             
     except Exception as e:
         session.rollback()
