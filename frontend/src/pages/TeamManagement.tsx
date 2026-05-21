@@ -51,84 +51,86 @@ export default function TeamManagement() {
     }
 
     return (
-        <div className="container mx-auto py-6 space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h2 className="text-3xl font-bold tracking-tight">Team Management</h2>
-                    <p className="text-muted-foreground text-sm mt-1">
-                        Manage project members, roles, and access permissions.
-                    </p>
+        <div className="h-full overflow-y-auto pr-2">
+            <div className="container mx-auto py-6 space-y-6">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h2 className="text-3xl font-bold tracking-tight">Team Management</h2>
+                        <p className="text-muted-foreground text-sm mt-1">
+                            Manage project members, roles, and access permissions.
+                        </p>
+                    </div>
+                    <Button>
+                        <UserPlus className="mr-2 h-4 w-4" />
+                        Invite Member
+                    </Button>
                 </div>
-                <Button>
-                    <UserPlus className="mr-2 h-4 w-4" />
-                    Invite Member
-                </Button>
-            </div>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Organization Members</CardTitle>
-                    <CardDescription>
-                        A list of all users in your organization and their current project roles.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Member</TableHead>
-                                <TableHead>Role</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {users.map((user) => (
-                                <TableRow key={user.id}>
-                                    <TableCell>
-                                        <div className="flex flex-col">
-                                            <span className="font-medium">{user.email.split('@')[0]}</span>
-                                            <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                                <Mail className="h-3 w-3" />
-                                                {user.email}
-                                            </span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center gap-2">
-                                            <Shield className="h-4 w-4 text-muted-foreground" />
-                                            <span className="capitalize text-sm">{user.role}</span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Badge variant="default">
-                                            active
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                                    <MoreHorizontal className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                <DropdownMenuItem>Edit Role</DropdownMenuItem>
-                                                <DropdownMenuItem>View Activity</DropdownMenuItem>
-                                                <DropdownMenuSeparator />
-                                                <DropdownMenuItem className="text-destructive">
-                                                    Remove from Team
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </TableCell>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Organization Members</CardTitle>
+                        <CardDescription>
+                            A list of all users in your organization and their current project roles.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Member</TableHead>
+                                    <TableHead>Role</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
+                            </TableHeader>
+                            <TableBody>
+                                {users.map((user) => (
+                                    <TableRow key={user.id}>
+                                        <TableCell>
+                                            <div className="flex flex-col">
+                                                <span className="font-medium">{user.email.split('@')[0]}</span>
+                                                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                                    <Mail className="h-3 w-3" />
+                                                    {user.email}
+                                                </span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center gap-2">
+                                                <Shield className="h-4 w-4 text-muted-foreground" />
+                                                <span className="capitalize text-sm">{user.role}</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Badge variant="default">
+                                                active
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" className="h-8 w-8 p-0">
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                    <DropdownMenuItem>Edit Role</DropdownMenuItem>
+                                                    <DropdownMenuItem>View Activity</DropdownMenuItem>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem className="text-destructive">
+                                                        Remove from Team
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
+            </div>
         </div>
     );
 }

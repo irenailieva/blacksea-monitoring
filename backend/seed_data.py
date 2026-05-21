@@ -33,7 +33,7 @@ def seed():
             region_id = created_region.id
         else:
             print("Region already exists.")
-            region_id = existing_region[0].id
+            region_id = existing_region[0]["id"]
 
         # 2. Create Scenes
         print("Creating Scenes...")

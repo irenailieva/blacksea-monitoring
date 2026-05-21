@@ -244,18 +244,20 @@ def run_pipeline(job_id=None, bbox=None, aoi_name=None, cloud_max=None):
                 logger.success(f"ML Inference completed. Output: {output_path}")
                 # Upload ML output metadata
                 upload_to_db(output_path, db_url, effective_aoi, scene_id=scene_id_override, acquisition_date=real_acquisition_date)
+                logger.success("ETL Pipeline completed successfully!")
+                update_job_status(engine, job_id, 'completed', 100)
             else:
                 logger.error(f"ML Inference failed: {resp.status_code} - {resp.text}")
+                update_job_status(engine, job_id, 'failed')
         except Exception as e:
             logger.error(f"Failed to contact ML service: {e}")
-        
-        logger.success("ETL Pipeline completed successfully!")
-        update_job_status(engine, job_id, 'completed', 100)
+            update_job_status(engine, job_id, 'failed')
         
     except Exception as e:
         logger.exception(f"ETL Pipeline failed: {e}")
         update_job_status(engine, job_id, 'failed')
         raise
+
 
 if __name__ == "__main__":
     run_pipeline()

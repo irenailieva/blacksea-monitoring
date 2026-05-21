@@ -7,6 +7,7 @@ window.proj4 = proj4;
 
 // @ts-ignore
 import parseGeoraster from 'georaster';
+import api from '../../api/axios';
 
 interface ClassificationOverlayProps {
     url: string;
@@ -26,8 +27,8 @@ export default function ClassificationOverlay({ url, opacity = 0.8 }: Classifica
         const currentPngUrl = tifUrl.replace('.tif', '.png') + `?v=${Date.now()}`;
 
         // Fetch TIFF once to get spatial bounds for the ImageOverlay
-        fetch(tifUrl)
-            .then(res => res.arrayBuffer())
+        api.get(tifUrl, { responseType: 'arraybuffer' })
+            .then(res => res.data)
             .then(parseGeoraster)
             .then(georaster => {
                 if (!isActive) return;

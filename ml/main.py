@@ -40,9 +40,15 @@ def startup_event():
         model = load_model(ARTIFACTS_DIR)
         print(f"✅ Model loaded successfully from {ARTIFACTS_DIR}")
     except Exception as e:
-        print(f"⚠️ Failed to load model: {e}")
-        # We don't raise here to allow the app to start, but health check will show error
-        model = None
+        print(f"⚠️ Failed to load model: {e}. Attempting to train the model...")
+        try:
+            import subprocess
+            subprocess.run(["python", "train.py"], check=True)
+            model = load_model(ARTIFACTS_DIR)
+            print(f"✅ Model trained and loaded successfully from {ARTIFACTS_DIR}")
+        except Exception as inner_e:
+            print(f"⚠️ Failed to train and load model: {inner_e}")
+            model = None
 
 @app.get("/health", response_model=HealthResponse)
 def health():
