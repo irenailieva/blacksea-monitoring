@@ -128,8 +128,8 @@ def get_stats(
     veg_trend = ((veg_area - prev_veg_area) / prev_veg_area * 100) if prev_veg_area > 0 else 0
     conf_trend = avg_conf - prev_avg_conf
     
-    # Simple anomaly logic: drop in vegetation > 10%
-    anomalies = 1 if veg_trend < -10 else 0
+    # Simple anomaly logic: drop in vegetation > 20%
+    anomalies = 1 if veg_trend < -20 else 0
     
     return {
        "total_vegetation_area_m2": veg_area,

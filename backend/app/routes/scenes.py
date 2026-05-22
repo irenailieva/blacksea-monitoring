@@ -114,7 +114,7 @@ def read_scenes(
     if region_id:
         query = query.filter(Scene.region_id == region_id)
         
-    res = query.order_by(Scene.acquisition_date.desc()).offset(skip).limit(limit).all()
+    res = query.order_by(Scene.acquisition_date.desc(), Scene.id.desc()).offset(skip).limit(limit).all()
     
     print(f"[DEBUG] Returning {len(res)} scenes")
     return res
@@ -208,8 +208,54 @@ async def upload_scene_file(
         raise HTTPException(status_code=500, detail=f"Failed to save file: {e}")
 
     from app.models.region import Region
-    region = db.query(Region).first()
-    region_id = region.id if region else 1
+    import json
+    
+    region_id = None
+    try:
+        import rasterio
+        from sqlalchemy import func
+        with rasterio.open(str(file_path)) as src:
+            bounds = src.bounds
+            
+        intersecting = db.query(Region).filter(
+            ~Region.name.like("AOI_%"),
+            ~Region.name.like("aoi_%"),
+            func.ST_Intersects(
+                Region.geometry,
+                func.ST_MakeEnvelope(bounds.left, bounds.bottom, bounds.right, bounds.top, 4326)
+            )
+        ).first()
+        
+        if intersecting:
+            region_id = intersecting.id
+        else:
+            aoi_name = f"AOI_{ts}"
+            geom = {
+                "type": "Polygon",
+                "coordinates": [[
+                    [bounds.left, bounds.bottom],
+                    [bounds.right, bounds.bottom],
+                    [bounds.right, bounds.top],
+                    [bounds.left, bounds.top],
+                    [bounds.left, bounds.bottom]
+                ]]
+            }
+            new_region = Region(
+                name=aoi_name,
+                description="Auto-generated AOI from manual upload",
+                area_km2=0.0,
+                geometry=func.ST_GeomFromGeoJSON(json.dumps(geom))
+            )
+            db.add(new_region)
+            db.commit()
+            db.refresh(new_region)
+            region_id = new_region.id
+            
+    except Exception as e:
+        print(f"Geospatial mapping failed: {e}")
+        # Fallback if rasterio fails or not installed
+        region = db.query(Region).first()
+        region_id = region.id if region else 1
 
     scene_in = schemas.SceneCreate(
         scene_id=scene_id_str,

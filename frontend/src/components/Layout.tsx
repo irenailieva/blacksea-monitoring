@@ -31,6 +31,7 @@ export default function Layout() {
         { name: 'Analysis', href: '/analysis', icon: LayoutDashboard },
         { name: 'Data', href: '/data', icon: Archive, roles: ['researcher', 'admin'] },
         { name: 'Admin', href: '/admin', icon: Users, roles: ['admin'] },
+        { name: 'Regions', href: '/regions', icon: Map, roles: ['admin'] },
     ];
 
     const filteredNav = navigation.filter(item =>
@@ -148,7 +149,7 @@ export default function Layout() {
                     </DropdownMenu>
                 </div>
             </header>
-            <main className="relative z-0 flex h-[calc(100vh-4rem)] flex-col gap-4 bg-muted/40 p-4 md:gap-8 md:p-10 overflow-hidden">
+            <main className="relative z-0 flex h-[calc(100vh-4rem)] flex-col pt-4 px-4 pb-0 md:pt-8 md:px-10 md:pb-0 bg-slate-100/80 overflow-hidden shadow-inner border-t border-slate-200/60">
                 <Outlet />
             </main>
         </div>

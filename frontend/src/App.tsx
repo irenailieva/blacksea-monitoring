@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard';
 import Analysis from './pages/Analysis';
 import DataUpload from './pages/DataUpload';
 import TeamManagement from './pages/TeamManagement';
+import RegionManagement from './pages/RegionManagement';
 import Settings from './pages/Settings';
 import './App.css';
 
@@ -70,6 +71,11 @@ function App() {
             </RequireRole>
           } />
           <Route path="admin" element={<TeamManagement />} />
+          <Route path="regions" element={
+            <RequireRole roles={['admin']}>
+              <RegionManagement />
+            </RequireRole>
+          } />
           <Route path="settings" element={<Settings />} />
         </Route>
       </Routes>
