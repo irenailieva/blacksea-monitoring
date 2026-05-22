@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, Layers, Image as ImageIcon, RefreshCw, CheckCircle2, AlertCircle, Clock, Satellite } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Region, Scene } from '../api/types';
 import api from '@/api/axios';
 import { BBox } from '@/components/Map/AoiDrawTool';
@@ -32,6 +33,7 @@ export default function Dashboard() {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [activeJob, setActiveJob] = useState<ActiveJob | null>(null);
+    const [activeTab, setActiveTab] = useState("map");
 
     // ── data init ────────────────────────────────────────────────────────────
     useEffect(() => {
@@ -162,174 +164,189 @@ export default function Dashboard() {
     }
 
     return (
-        <div className="flex h-full flex-col space-y-4 overflow-y-auto pr-2 pb-6">
+        <div className="flex h-full flex-col overflow-hidden bg-muted/20">
             {/* Header */}
-            <div className="flex items-center justify-between p-1">
-                <h2 className="text-3xl font-bold tracking-tight">Monitoring Map</h2>
+            <div className="flex-none px-4 py-3 m-4 mb-0 rounded-lg flex items-center justify-between border-2 border-slate-300 dark:border-slate-700 bg-background shadow-sm z-10">
+                <div className="flex items-center gap-6">
+                    <h2 className="text-3xl font-bold tracking-tight">Monitoring Map</h2>
+                    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-[400px]">
+                        <TabsList className="grid w-full grid-cols-2">
+                            <TabsTrigger value="map">Map Explorer</TabsTrigger>
+                            <TabsTrigger value="analysis" disabled={!selectedScene}>Analysis Dashboard</TabsTrigger>
+                        </TabsList>
+                    </Tabs>
+                </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <Satellite className="h-3.5 w-3.5" />
                     Draw an area on the map to start analysis
                 </div>
             </div>
 
-            <div className="grid min-h-[600px] grid-cols-1 gap-4 lg:grid-cols-4">
-                {/* ── Sidebar ── */}
-                <div className="space-y-4 lg:col-span-1 overflow-y-auto pr-1">
+            {/* Map View */}
+            <div className={`flex-1 min-h-0 p-4 ${activeTab === 'map' ? 'block' : 'hidden'}`}>
+                <div className="grid h-full grid-cols-1 gap-4 lg:grid-cols-4">
+                    {/* ── Sidebar ── */}
+                    <div className="flex flex-col h-full space-y-4 lg:col-span-1 min-h-0">
 
-                    {/* Active job status card */}
-                    {activeJob && (
-                        <Card className={`border-2 ${
-                            activeJob.status === 'failed' ? 'border-destructive/40' :
-                            activeJob.status === 'completed' ? 'border-green-500/40' :
-                            'border-primary/40'
-                        }`}>
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-sm flex items-center gap-2">
-                                    {activeJob.status === 'completed' && <CheckCircle2 className="h-4 w-4 text-green-500" />}
-                                    {activeJob.status === 'failed' && <AlertCircle className="h-4 w-4 text-destructive" />}
-                                    {(activeJob.status === 'pending' || activeJob.status === 'processing') && (
-                                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                        {/* Active job status card */}
+                        {activeJob && (
+                            <Card className={`shrink-0 border-2 ${
+                                activeJob.status === 'failed' ? 'border-destructive/40' :
+                                activeJob.status === 'completed' ? 'border-green-500/40' :
+                                'border-primary/40'
+                            }`}>
+                                <CardHeader className="pb-2">
+                                    <CardTitle className="text-sm flex items-center gap-2">
+                                        {activeJob.status === 'completed' && <CheckCircle2 className="h-4 w-4 text-green-500" />}
+                                        {activeJob.status === 'failed' && <AlertCircle className="h-4 w-4 text-destructive" />}
+                                        {(activeJob.status === 'pending' || activeJob.status === 'processing') && (
+                                            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                                        )}
+                                        AOI Analysis
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-2">
+                                    <p className="text-[11px] font-mono truncate text-muted-foreground">{activeJob.aoi_name}</p>
+                                    <p className="text-[10px] text-muted-foreground">
+                                        [{activeJob.bbox.map(v => v.toFixed(3)).join(', ')}]
+                                    </p>
+                                    {(activeJob.status === 'pending' || activeJob.status === 'processing') ? (
+                                        <>
+                                            <Progress
+                                                value={activeJob.progress}
+                                                className="h-1.5"
+                                            />
+                                            <div className="flex items-center justify-between">
+                                                <Badge
+                                                    variant="secondary"
+                                                    className="text-[10px] uppercase"
+                                                >
+                                                    {activeJob.status === 'pending' ? (
+                                                        <><Clock className="h-2.5 w-2.5 mr-1" />Queued</>
+                                                    ) : activeJob.status}
+                                                </Badge>
+                                                <span className="text-[10px] text-muted-foreground">
+                                                    {Math.round(activeJob.progress)}%
+                                                </span>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="flex items-center justify-between pt-1">
+                                            {activeJob.status === 'completed' ? (
+                                                <p className="text-[10px] text-green-600 font-medium">
+                                                    ✓ Classification loaded on map
+                                                </p>
+                                            ) : (
+                                                <p className="text-[10px] text-destructive">
+                                                    Pipeline failed — check logs
+                                                </p>
+                                            )}
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-6 text-[10px] px-2 shrink-0"
+                                                onClick={() => setActiveJob(null)}
+                                            >
+                                                Dismiss
+                                            </Button>
+                                        </div>
                                     )}
-                                    AOI Analysis
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-2">
-                                <p className="text-[11px] font-mono truncate text-muted-foreground">{activeJob.aoi_name}</p>
-                                <p className="text-[10px] text-muted-foreground">
-                                    [{activeJob.bbox.map(v => v.toFixed(3)).join(', ')}]
-                                </p>
-                                <Progress
-                                    value={activeJob.status === 'completed' ? 100 : activeJob.progress}
-                                    className="h-1.5"
-                                />
-                                <div className="flex items-center justify-between">
-                                    <Badge
-                                        variant={activeJob.status === 'completed' ? 'default' : activeJob.status === 'failed' ? 'destructive' : 'secondary'}
-                                        className="text-[10px] uppercase"
-                                    >
-                                        {activeJob.status === 'pending' ? (
-                                            <><Clock className="h-2.5 w-2.5 mr-1" />Queued</>
-                                        ) : activeJob.status}
-                                    </Badge>
-                                    <span className="text-[10px] text-muted-foreground">
-                                        {activeJob.status === 'completed' ? 100 : Math.round(activeJob.progress)}%
-                                    </span>
-                                </div>
-                                {activeJob.status === 'completed' && (
-                                    <p className="text-[10px] text-green-600 font-medium">
-                                        ✓ Classification loaded on map
-                                    </p>
-                                )}
-                                {activeJob.status === 'failed' && (
-                                    <p className="text-[10px] text-destructive">
-                                        Pipeline failed — check ETL logs
-                                    </p>
-                                )}
-                                {(activeJob.status === 'completed' || activeJob.status === 'failed') && (
+                                </CardContent>
+                            </Card>
+                        )}
+
+                        {/* Available scenes */}
+                        <Card className="flex-1 flex flex-col min-h-0">
+                            <CardHeader className="pb-3 shrink-0">
+                                <CardTitle className="text-lg flex items-center gap-2">
+                                    <ImageIcon className="h-4 w-4" />
+                                    Available Scenes ({sortedScenes.length})
                                     <Button
                                         variant="ghost"
-                                        size="sm"
-                                        className="w-full h-6 text-[10px]"
-                                        onClick={() => setActiveJob(null)}
+                                        size="icon"
+                                        className="h-5 w-5 ml-auto"
+                                        onClick={() => fetchScenes()}
+                                        disabled={refreshing}
+                                        title="Refresh scenes"
                                     >
-                                        Dismiss
+                                        <RefreshCw className={`h-3 w-3 ${refreshing ? 'animate-spin' : ''}`} />
                                     </Button>
-                                )}
-                            </CardContent>
-                        </Card>
-                    )}
-
-                    {/* Available scenes */}
-                    <Card>
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-lg flex items-center gap-2">
-                                <ImageIcon className="h-4 w-4" />
-                                Available Scenes ({sortedScenes.length})
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-5 w-5 ml-auto"
-                                    onClick={() => fetchScenes()}
-                                    disabled={refreshing}
-                                    title="Refresh scenes"
-                                >
-                                    <RefreshCw className={`h-3 w-3 ${refreshing ? 'animate-spin' : ''}`} />
-                                </Button>
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-0">
-                            <div className="flex flex-col max-h-[360px] overflow-y-auto">
-                                {sortedScenes.length === 0 ? (
-                                    <div className="p-8 text-xs text-muted-foreground text-center flex flex-col items-center gap-2">
-                                        <Layers className="h-8 w-8 opacity-20" />
-                                        <p>No scenes yet.</p>
-                                        <p className="text-[10px]">Draw an area on the map to trigger your first analysis.</p>
-                                    </div>
-                                ) : (
-                                    sortedScenes.map(scene => (
-                                        <div
-                                            key={scene.id}
-                                            onClick={() => setSelectedScene(scene)}
-                                            className={`p-3 border-b last:border-0 cursor-pointer hover:bg-muted/50 transition-colors ${
-                                                selectedScene?.id === scene.id
-                                                    ? 'bg-primary/5 border-l-4 border-l-primary'
-                                                    : ''
-                                            }`}
-                                        >
-                                            <div className="flex flex-col gap-1 min-w-0">
-                                                <span className={`text-xs font-bold truncate block ${scene.display_name ? 'font-sans' : 'font-mono'}`}>
-                                                    {scene.display_name || scene.scene_id}
-                                                </span>
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-[10px] text-muted-foreground">
-                                                        {scene.acquisition_date}
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-0 flex-1 overflow-y-auto min-h-0">
+                                <div className="flex flex-col">
+                                    {sortedScenes.length === 0 ? (
+                                        <div className="p-8 text-xs text-muted-foreground text-center flex flex-col items-center gap-2">
+                                            <Layers className="h-8 w-8 opacity-20" />
+                                            <p>No scenes yet.</p>
+                                            <p className="text-[10px]">Draw an area on the map to trigger your first analysis.</p>
+                                        </div>
+                                    ) : (
+                                        sortedScenes.map(scene => (
+                                            <div
+                                                key={scene.id}
+                                                onClick={() => setSelectedScene(scene)}
+                                                className={`p-3 border-b last:border-0 cursor-pointer hover:bg-muted/50 transition-colors ${
+                                                    selectedScene?.id === scene.id
+                                                        ? 'bg-primary/5 border-l-4 border-l-primary'
+                                                        : ''
+                                                }`}
+                                            >
+                                                <div className="flex flex-col gap-1 min-w-0">
+                                                    <span className={`text-xs font-bold truncate block ${scene.display_name ? 'font-sans' : 'font-mono'}`}>
+                                                        {scene.display_name || scene.scene_id}
                                                     </span>
-                                                    <Badge variant="outline" className="text-[9px] h-4">
-                                                        {scene.cloud_cover !== null && scene.cloud_cover !== undefined
-                                                            ? `${scene.cloud_cover.toFixed(1)}% cloud`
-                                                            : 'Manual'}
-                                                    </Badge>
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-[10px] text-muted-foreground">
+                                                            {scene.acquisition_date}
+                                                        </span>
+                                                        <Badge variant="outline" className="text-[9px] h-4">
+                                                            {scene.cloud_cover !== null && scene.cloud_cover !== undefined
+                                                                ? `${scene.cloud_cover.toFixed(1)}% cloud`
+                                                                : 'Manual'}
+                                                        </Badge>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                        </CardContent>
-                    </Card>
+                                        ))
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
 
-                    {/* Instructions card */}
-                    <Card className="border-dashed">
-                        <CardContent className="p-4 space-y-2">
-                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">How it works</p>
-                            <ol className="text-[11px] text-muted-foreground space-y-1.5 list-decimal list-inside">
-                                <li>Click <strong>"Analyze Area"</strong> on the map</li>
-                                <li>Drag to draw your area of interest</li>
-                                <li>Click <strong>"Analyze this area"</strong></li>
-                                <li>Wait for the pipeline to complete</li>
-                                <li>Classification overlay loads automatically</li>
-                            </ol>
-                        </CardContent>
-                    </Card>
-                </div>
+                        {/* Instructions card */}
+                        <Card className="border-dashed shrink-0">
+                            <CardContent className="p-4 space-y-2">
+                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">How it works</p>
+                                <ol className="text-[11px] text-muted-foreground space-y-1.5 list-decimal list-inside">
+                                    <li>Click <strong>"Analyze Area"</strong> on the map</li>
+                                    <li>Drag to draw your area of interest</li>
+                                    <li>Click <strong>"Analyze this area"</strong></li>
+                                    <li>Wait for the pipeline to complete</li>
+                                    <li>Classification overlay loads automatically</li>
+                                </ol>
+                            </CardContent>
+                        </Card>
+                    </div>
 
-                {/* ── Map ── */}
-                <div className="lg:col-span-3 min-h-0">
-                    <Card className="h-full">
-                        <CardContent className="p-0 h-full">
-                            <AppMap
-                                regions={regions}
-                                selectedSceneUrl={selectedSceneUrl}
-                                onAoiSubmit={canAnalyze ? handleAoiSubmit : undefined}
-                            />
-                        </CardContent>
-                    </Card>
+                    {/* ── Map ── */}
+                    <div className="lg:col-span-3 h-full min-h-0">
+                        <Card className="h-full">
+                            <CardContent className="p-0 h-full">
+                                <AppMap
+                                    regions={regions}
+                                    selectedSceneUrl={selectedSceneUrl}
+                                    onAoiSubmit={canAnalyze ? handleAoiSubmit : undefined}
+                                />
+                            </CardContent>
+                        </Card>
+                    </div>
                 </div>
             </div>
 
             {/* Scene Analysis Section */}
-            {selectedScene && (
-                <div className="flex flex-col space-y-4 pt-6 border-t mt-6">
+            {activeTab === 'analysis' && selectedScene && (
+                <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-6">
                     <div className="flex items-center justify-between">
                         <h3 className="text-2xl font-bold tracking-tight">Scene Analysis: {selectedScene.display_name || selectedScene.scene_id}</h3>
                         <Badge variant="outline" className="text-xs">

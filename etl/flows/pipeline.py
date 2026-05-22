@@ -158,11 +158,11 @@ def run_pipeline(job_id=None, bbox=None, aoi_name=None, cloud_max=None, display_
                             FROM scenes s 
                             JOIN scene_files f ON s.id = f.scene_id 
                             JOIN regions r ON s.region_id = r.id
-                            WHERE s.scene_id = :sid 
+                            WHERE s.scene_id LIKE :sid 
                               AND f.file_type = 'CLASSIFICATION'
                               AND r.name = :rname
                         """),
-                        {"sid": expected_scene_id, "rname": effective_aoi['name']}
+                        {"sid": f"{expected_scene_id}%", "rname": effective_aoi['name']}
                     ).fetchall()
                 if rows:
                     logger.info(f"Scene '{expected_scene_id}' already in DB for region '{effective_aoi['name']}' — skipping.")

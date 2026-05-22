@@ -94,9 +94,10 @@ input[type="reset"] {
   cursor: pointer;
 }
 
-/* Ensure Leaflet is always the baseline */
-.leaflet-container {
+/* Ensure Leaflet is always the baseline and uses Montserrat */
+.leaflet-container, .leaflet-popup, .leaflet-tooltip, .leaflet-control {
   z-index: 0 !important;
+  font-family: var(--font-sans) !important;
 }
 
 /* Ensure our portal root inside the header inherits the high stack */
