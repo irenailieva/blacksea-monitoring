@@ -30,6 +30,13 @@ STALE_THRESHOLD_MINUTES = 10  # jobs stuck longer than this get marked failed
 async def lifespan(app: FastAPI):
     """Startup: create tables and resolve any stale ETL jobs left over from a crash."""
     Base.metadata.create_all(bind=engine)
+    
+    # Ensure regions are seeded
+    try:
+        from seed_regions import seed_regions
+        seed_regions()
+    except Exception as e:
+        print(f"[Lifespan] Error seeding regions: {e}")
 
     # Ensure display_name column exists
     from sqlalchemy import text

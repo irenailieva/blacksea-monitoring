@@ -57,7 +57,7 @@ export default function DataUpload() {
     return (
         <div className="h-full overflow-y-auto pr-2">
             <div className="container mx-auto py-8 space-y-8">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between p-1">
                     <div>
                         <h2 className="text-3xl font-bold tracking-tight text-primary">Data Upload</h2>
                         <p className="text-muted-foreground mt-1 text-sm">Upload local data or trigger automated Sentinel-2 processing.</p>

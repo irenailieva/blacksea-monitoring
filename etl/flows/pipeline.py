@@ -143,7 +143,7 @@ def run_pipeline(job_id=None, bbox=None, aoi_name=None, cloud_max=None, display_
                 output_dir=output_dir,
                 mode=mode,
                 cloud_max=effective_cloud_max,
-                progress_callback=lambda p: update_job_status(engine, job_id, 'processing', base_progress + (p / 100) * region_progress_step * 0.2)
+                progress_callback=lambda p: update_job_status(engine, job_id, 'processing', base_progress + (p / 100) * region_progress_step * 0.6)
             )
 
             stac_item_id = download_result.get("stac_item_id", "")
@@ -175,13 +175,13 @@ def run_pipeline(job_id=None, bbox=None, aoi_name=None, cloud_max=None, display_
                 logger.warning(f"No valid data returned for {effective_aoi['name']}, skipping.")
                 continue
 
-            update_job_status(engine, job_id, 'processing', base_progress + region_progress_step * 0.3)
+            update_job_status(engine, job_id, 'processing', base_progress + region_progress_step * 0.6)
             
             processed_file = preprocess_raster(raw_file)
-            update_job_status(engine, job_id, 'processing', base_progress + region_progress_step * 0.5)
+            update_job_status(engine, job_id, 'processing', base_progress + region_progress_step * 0.63)
             
             ndvi_file = generate_index(processed_file, index_name='NDVI')
-            update_job_status(engine, job_id, 'processing', base_progress + region_progress_step * 0.7)
+            update_job_status(engine, job_id, 'processing', base_progress + region_progress_step * 0.66)
             
             def get_scene_metadata(f):
                 fname = os.path.basename(f)
@@ -209,7 +209,7 @@ def run_pipeline(job_id=None, bbox=None, aoi_name=None, cloud_max=None, display_
             upload_to_db(processed_file, db_url, effective_aoi, scene_id=scene_id_override, acquisition_date=real_acquisition_date, cloud_cover=real_cloud_cover, display_name=display_name)
             upload_to_db(ndvi_file, db_url, effective_aoi, scene_id=scene_id_override, acquisition_date=real_acquisition_date, cloud_cover=real_cloud_cover, display_name=display_name)
             
-            update_job_status(engine, job_id, 'processing', base_progress + region_progress_step * 0.9)
+            update_job_status(engine, job_id, 'processing', base_progress + region_progress_step * 0.7)
             
             logger.info(f"Triggering ML Inference for {effective_aoi['name']}...")
             ml_url = os.getenv("ML_BASE_URL", "http://ml:8500")
@@ -235,7 +235,20 @@ def run_pipeline(job_id=None, bbox=None, aoi_name=None, cloud_max=None, display_
             }
             
             try:
+                from flows.downloader import ProgressSimulator
+                ml_start = base_progress + region_progress_step * 0.7
+                ml_end = base_progress + region_progress_step * 0.95
+                sim = ProgressSimulator(
+                    lambda p: update_job_status(engine, job_id, 'processing', p),
+                    ml_start, ml_end, duration=60
+                )
+                sim.start_sim()
+
                 resp = requests.post(f"{ml_url}/process_scene", json=payload)
+                
+                sim.stop()
+                update_job_status(engine, job_id, 'processing', ml_end)
+
                 if resp.status_code == 200:
                     logger.success(f"ML Inference completed. Output: {output_path}")
                     resp_json = resp.json()

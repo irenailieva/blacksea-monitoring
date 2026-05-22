@@ -85,7 +85,7 @@ export default function Analysis() {
 
     return (
         <div className="flex flex-col space-y-4 h-full  overflow-y-auto pr-2">
-            <div className="flex items-center justify-between space-y-2">
+            <div className="flex items-center justify-between space-y-2 p-1">
                 <h2 className="text-3xl font-bold tracking-tight">Analysis Dashboard</h2>
                 <div className="flex items-center space-x-2">
                     <Select value={selectedRegion} onValueChange={setSelectedRegion}>

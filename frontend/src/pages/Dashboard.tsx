@@ -164,7 +164,7 @@ export default function Dashboard() {
     return (
         <div className="flex h-full flex-col space-y-4 overflow-y-auto pr-2 pb-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between p-1">
                 <h2 className="text-3xl font-bold tracking-tight">Monitoring Map</h2>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <Satellite className="h-3.5 w-3.5" />
@@ -212,7 +212,7 @@ export default function Dashboard() {
                                         ) : activeJob.status}
                                     </Badge>
                                     <span className="text-[10px] text-muted-foreground">
-                                        {activeJob.status === 'completed' ? 100 : activeJob.progress}%
+                                        {activeJob.status === 'completed' ? 100 : Math.round(activeJob.progress)}%
                                     </span>
                                 </div>
                                 {activeJob.status === 'completed' && (

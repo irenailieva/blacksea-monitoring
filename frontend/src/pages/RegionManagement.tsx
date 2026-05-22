@@ -121,7 +121,7 @@ export default function RegionManagement() {
     return (
         <div className="h-full overflow-y-auto pr-2">
             <div className="container mx-auto py-6 space-y-6">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between p-1">
                     <div>
                         <h2 className="text-3xl font-bold tracking-tight">Region Management</h2>
                         <p className="text-muted-foreground text-sm mt-1">

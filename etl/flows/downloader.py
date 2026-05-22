@@ -6,6 +6,32 @@ from loguru import logger
 import pystac_client
 import odc.stac
 import rioxarray
+import threading
+import time
+
+class ProgressSimulator:
+    def __init__(self, callback, start, end, duration=30):
+        self.callback = callback
+        self.start = start
+        self.end = end
+        self.duration = duration
+        self.stop_requested = False
+        self.thread = threading.Thread(target=self.run)
+    def start_sim(self):
+        self.thread.start()
+    def run(self):
+        steps = 30
+        step_time = self.duration / steps
+        for i in range(steps):
+            if self.stop_requested:
+                break
+            if self.callback:
+                self.callback(self.start + (self.end - self.start) * (i / steps))
+            time.sleep(step_time)
+    def stop(self):
+        self.stop_requested = True
+        if self.thread.is_alive():
+            self.thread.join()
 
 def download_data(aoi: dict, time_range: dict, output_dir: str, mode: str = "mock", cloud_max: int = 20, progress_callback=None) -> dict:
     """
@@ -61,6 +87,8 @@ def download_data(aoi: dict, time_range: dict, output_dir: str, mode: str = "moc
             
             if progress_callback:
                 progress_callback(10)
+                sim = ProgressSimulator(progress_callback, 10, 90, duration=45)
+                sim.start_sim()
             
             # Load all required bands in one pass for efficiency
             # We load only the first item [item] instead of the whole list [items]
@@ -73,7 +101,8 @@ def download_data(aoi: dict, time_range: dict, output_dir: str, mode: str = "moc
             )
             
             if progress_callback:
-                progress_callback(20)
+                sim.stop()
+                progress_callback(90)
             
             if "time" in ds.dims:
                 ds = ds.isel(time=0)
@@ -87,7 +116,7 @@ def download_data(aoi: dict, time_range: dict, output_dir: str, mode: str = "moc
             da_composite.rio.to_raster(composite_filepath)
             
             if progress_callback:
-                progress_callback(25)
+                progress_callback(95)
             
             # --- Save Individual Bands for ML ---
             ml_band_paths = {}
@@ -102,7 +131,7 @@ def download_data(aoi: dict, time_range: dict, output_dir: str, mode: str = "moc
                 ml_band_paths[ml_name] = band_filepath
                 
                 if progress_callback:
-                    progress_callback(25 + i + 1)
+                    progress_callback(95 + i + 1)
             
             logger.success(f"Downloaded real data for item {item.id} to {composite_filepath}")
             return {
