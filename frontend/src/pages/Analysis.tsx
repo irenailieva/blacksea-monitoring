@@ -8,11 +8,14 @@ import { Download, Loader2 } from 'lucide-react';
 import api from '@/api/axios';
 import { Region } from '@/api/types';
 
+// Страница (Page) за анализ на данни за конкретен регион
 export default function Analysis() {
-    const [selectedRegion, setSelectedRegion] = useState<string>('');
-    const [regions, setRegions] = useState<Region[]>([]);
-    const [loading, setLoading] = useState(true);
+    // Състояния на компонента
+    const [selectedRegion, setSelectedRegion] = useState<string>(''); // Избран регион за анализ
+    const [regions, setRegions] = useState<Region[]>([]); // Списък с наличните региони
+    const [loading, setLoading] = useState(true); // Флаг за първоначално зареждане
     
+    // Състояние за статистическите данни на избрания регион
     const [stats, setStats] = useState({
         total_vegetation_area_m2: 0,
         vegetation_trend_percent: 0,
@@ -22,39 +25,46 @@ export default function Analysis() {
         anomalies_trend: 0
     });
 
+    // Извличане на списъка с региони при първоначалното зареждане на компонента
     useEffect(() => {
         const fetchRegions = async () => {
             try {
+                // Вземане на регионите от бекенда
                 const response = await api.get<Region[]>('/regions');
+                // Филтрираме динамично генерираните (потребителски) AOI региони, оставяйки само предефинираните (напр. "Варненско езеро")
                 const filteredRegions = response.data.filter(r => !r.name.startsWith('AOI_'));
                 setRegions(filteredRegions);
+                // Автоматично избиране на първия наличен регион, ако има такъв
                 if (filteredRegions.length > 0) {
                     setSelectedRegion(filteredRegions[0].id.toString());
                 }
             } catch (error) {
-                console.error('Failed to fetch regions:', error);
+                console.error('Неуспешно извличане на регионите:', error);
             } finally {
-                setLoading(false);
+                setLoading(false); // Край на зареждането
             }
         };
         fetchRegions();
     }, []);
 
+    // Извличане на статистическите данни при промяна на избрания регион
     useEffect(() => {
-        if (!selectedRegion) return;
+        if (!selectedRegion) return; // Защита: ако няма избран регион, не правим заявка
         const fetchStats = async () => {
             try {
+                // Изпращане на заявка към агрегиращия ендпойнт /analysis/stats
                 const response = await api.get('/analysis/stats', {
                     params: { region_id: selectedRegion }
                 });
                 setStats(response.data);
             } catch (error) {
-                console.error('Failed to fetch stats:', error);
+                console.error('Неуспешно извличане на статистика:', error);
             }
         };
         fetchStats();
-    }, [selectedRegion]);
+    }, [selectedRegion]); // Зависимост: изпълнява се при всяка промяна на selectedRegion
 
+    // Визуализация по време на първоначалното зареждане
     if (loading) {
         return (
             <div className="flex h-full items-center justify-center">
@@ -63,34 +73,48 @@ export default function Analysis() {
         );
     }
 
+    // Функция за генериране и изтегляне на CSV файл с аналитичния репорт
     const exportAnalysisCSV = () => {
-        const regionName = regions.find(r => r.id.toString() === selectedRegion)?.name || 'Unknown Region';
-        const headers = ["Region", "Metric", "Value", "Trend"];
+        // Намиране на името на текущо избрания регион
+        const regionName = regions.find(r => r.id.toString() === selectedRegion)?.name || 'Неизвестен регион';
+        
+        // Дефиниране на заглавките на CSV файла
+        const headers = ["Регион", "Метрика", "Стойност", "Тенденция"];
+        
+        // Подготовка на редовете с данни
         const rows = [
-            [regionName, "Total Vegetation Area (km²)", (stats.total_vegetation_area_m2 / 1_000_000).toFixed(2), `${stats.vegetation_trend_percent > 0 ? '+' : ''}${stats.vegetation_trend_percent}%`],
-            [regionName, "Average Confidence Score (%)", stats.avg_confidence.toString(), `${stats.confidence_trend_percent > 0 ? '+' : ''}${stats.confidence_trend_percent}%`],
-            [regionName, "Active Anomalies", stats.active_anomalies.toString(), `${stats.anomalies_trend > 0 ? '+' : ''}${stats.anomalies_trend}`]
+            [regionName, "Обща площ растителност (km²)", (stats.total_vegetation_area_m2 / 1_000_000).toFixed(2), `${stats.vegetation_trend_percent > 0 ? '+' : ''}${stats.vegetation_trend_percent}%`],
+            [regionName, "Средна увереност на модела (%)", stats.avg_confidence.toString(), `${stats.confidence_trend_percent > 0 ? '+' : ''}${stats.confidence_trend_percent}%`],
+            [regionName, "Активни аномалии", stats.active_anomalies.toString(), `${stats.anomalies_trend > 0 ? '+' : ''}${stats.anomalies_trend}`]
         ];
         
+        // Сглобяване на CSV съдържанието
         const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+        // Създаване на Blob обект от стринга
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        // Генериране на временен URL
         const url = URL.createObjectURL(blob);
+        
+        // Създаване на невидим линк и програмно "кликване" върху него за стартиране на изтеглянето
         const link = document.createElement("a");
         link.setAttribute("href", url);
         link.setAttribute("download", `analysis_summary_${regionName.replace(/ /g, '_')}_${new Date().toISOString().split('T')[0]}.csv`);
         document.body.appendChild(link);
         link.click();
-        document.body.removeChild(link);
+        document.body.removeChild(link); // Почистване на DOM
     };
 
+    // Рендиране на основния потребителски интерфейс
     return (
-        <div className="flex flex-col space-y-4 h-full  overflow-y-auto pr-2">
+        <div className="flex flex-col space-y-4 h-full overflow-y-auto pr-2">
+            {/* Горен панел: Заглавие, избор на регион и бутон за експорт */}
             <div className="flex items-center justify-between space-y-2 p-1">
-                <h2 className="text-3xl font-bold tracking-tight">Analysis Dashboard</h2>
+                <h2 className="text-3xl font-bold tracking-tight">Табло за Анализи</h2>
                 <div className="flex items-center space-x-2">
+                    {/* Падащо меню (Select) за избор на регион */}
                     <Select value={selectedRegion} onValueChange={setSelectedRegion}>
                         <SelectTrigger className="w-[180px]">
-                            <SelectValue placeholder="Select Region" />
+                            <SelectValue placeholder="Изберете регион" />
                         </SelectTrigger>
                         <SelectContent>
                             {regions.map(region => (
@@ -100,50 +124,60 @@ export default function Analysis() {
                             ))}
                         </SelectContent>
                     </Select>
-                    <Button size="icon" variant="outline" onClick={exportAnalysisCSV}>
+                    {/* Бутон за изтегляне на CSV */}
+                    <Button size="icon" variant="outline" onClick={exportAnalysisCSV} title="Експортиране в CSV">
                         <Download className="h-4 w-4" />
                     </Button>
                 </div>
             </div>
 
+            {/* Мрежа с основните числови индикатори (KPIs) */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {/* Карточка 1: Площ */}
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Vegetation Area</CardTitle>
+                        <CardTitle className="text-sm font-medium">Обща площ на растителността</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{(stats.total_vegetation_area_m2 / 1_000_000).toLocaleString(undefined, { maximumFractionDigits: 2 })} km²</div>
                         <p className="text-xs text-muted-foreground">
-                            {stats.vegetation_trend_percent > 0 ? '+' : ''}{stats.vegetation_trend_percent}% from last scene
+                            {stats.vegetation_trend_percent > 0 ? '+' : ''}{stats.vegetation_trend_percent}% спрямо предишна сцена
                         </p>
                     </CardContent>
                 </Card>
+                
+                {/* Карточка 2: Увереност */}
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Avg. Confidence Score</CardTitle>
+                        <CardTitle className="text-sm font-medium">Ср. увереност (Confidence)</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{stats.avg_confidence}%</div>
                         <p className="text-xs text-muted-foreground">
-                            {stats.confidence_trend_percent > 0 ? '+' : ''}{stats.confidence_trend_percent}% from last scene
+                            {stats.confidence_trend_percent > 0 ? '+' : ''}{stats.confidence_trend_percent}% спрямо предишна сцена
                         </p>
                     </CardContent>
                 </Card>
+                
+                {/* Карточка 3: Аномалии */}
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Active Anomalies</CardTitle>
+                        <CardTitle className="text-sm font-medium">Активни аномалии</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{stats.active_anomalies}</div>
                         <p className="text-xs text-muted-foreground">
-                            {stats.anomalies_trend > 0 ? '+' : ''}{stats.anomalies_trend} new anomalies
+                            {stats.anomalies_trend > 0 ? '+' : ''}{stats.anomalies_trend} нови аномалии
                         </p>
                     </CardContent>
                 </Card>
             </div>
 
+            {/* Мрежа с графики */}
             <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-3">
+                {/* Графика: Тенденция във времето (заема 2/3 от ширината) */}
                 <VegetationChart regionId={selectedRegion ? Number(selectedRegion) : null} />
+                {/* Графика: Обяснимост на модела (заема 1/3 от ширината) */}
                 <ShapExplanation regionId={selectedRegion} />
             </div>
         </div>

@@ -5,14 +5,15 @@ import { X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
+// Компоненти за изскачащ панел (Sheet/Offcanvas)
+// Изграден върху Radix UI Dialog, но със стилове за поява отстрани на екрана.
 const Sheet = SheetPrimitive.Root
-
 const SheetTrigger = SheetPrimitive.Trigger
-
 const SheetClose = SheetPrimitive.Close
-
 const SheetPortal = SheetPrimitive.Portal
 
+// Компонент SheetOverlay
+// Затъмнява останалата част от екрана (фон) зад изскачащия панел.
 const SheetOverlay = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Overlay>,
   React.ComponentPropsWithoutRef<typeof SheetPrimitive.Overlay>
@@ -27,6 +28,7 @@ const SheetOverlay = React.forwardRef<
 ))
 SheetOverlay.displayName = SheetPrimitive.Overlay.displayName
 
+// Дефиниране на стиловите варианти за панела (посока на появяване)
 const sheetVariants = cva(
   "fixed z-[2000000000] gap-4 bg-background p-6 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500",
   {
@@ -41,7 +43,7 @@ const sheetVariants = cva(
       },
     },
     defaultVariants: {
-      side: "right",
+      side: "right", // По подразбиране се появява отдясно
     },
   }
 )
@@ -50,10 +52,13 @@ interface SheetContentProps
   extends React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content>,
     VariantProps<typeof sheetVariants> {}
 
+// Компонент SheetContent
+// Визуализира съдържанието на панела. Включва вграден бутон за затваряне.
 const SheetContent = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Content>,
   SheetContentProps
 >(({ side = "right", className, children, ...props }, ref) => {
+  // Рендиране чрез Portal, за да излезе извън текущия DOM възел (често необходимо при работа с Leaflet карти)
   const portalRoot = document.getElementById("header-portal-root");
   return (
     <SheetPortal container={portalRoot}>
@@ -63,7 +68,7 @@ const SheetContent = React.forwardRef<
         <SheetPrimitive.Close
           className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
           <X className="h-4 w-4" />
-          <span className="sr-only">Close</span>
+          <span className="sr-only">Затвори</span>
         </SheetPrimitive.Close>
       </SheetPrimitive.Content>
     </SheetPortal>

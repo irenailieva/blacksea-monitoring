@@ -1,31 +1,41 @@
 """
 Pydantic schemas за валидация на входни и изходни данни.
+Тези класове дефинират структурата на данните, които се приемат (request)
+и връщат (response) от API-то. Използват се за автоматична валидация
+и генериране на документация (OpenAPI/Swagger).
 """
 from datetime import datetime, date
 from typing import Optional, Any
 from pydantic import BaseModel, Field, EmailStr, ConfigDict
 
 
-# ==================== Base Schemas ====================
+# ==================== Base Schemas (Основни схеми) ====================
 
 class BaseSchema(BaseModel):
-    """Базов schema с обща конфигурация."""
+    """
+    Базова схема, от която наследяват всички останали.
+    ConfigDict(from_attributes=True) позволява на Pydantic да чете данни
+    директно от SQLAlchemy ORM модели, а не само от речници (dictionaries).
+    """
     model_config = ConfigDict(from_attributes=True)
 
 
-# ==================== User Schemas ====================
+# ==================== User Schemas (Потребителски схеми) ====================
 
 class UserBase(BaseSchema):
+    """Общи полета за потребител. Използва се като основа за създаване и четене."""
     username: str = Field(..., min_length=3, max_length=50)
     email: EmailStr
     role: str = Field(default="viewer", pattern="^(admin|researcher|viewer)$")
 
 
 class UserCreate(UserBase):
+    """Схема за създаване на нов потребител (изисква парола)."""
     password: str = Field(..., min_length=6, max_length=128)
 
 
 class UserUpdate(BaseSchema):
+    """Схема за обновяване на потребител. Всички полета са опционални (Optional)."""
     username: Optional[str] = Field(None, min_length=3, max_length=50)
     email: Optional[EmailStr] = None
     role: Optional[str] = Field(None, pattern="^(admin|researcher|viewer)$")
@@ -33,25 +43,29 @@ class UserUpdate(BaseSchema):
 
 
 class UserRead(UserBase):
+    """Схема за връщане на данни за потребител (response). Включва системни полета като ID и дати."""
     id: int
     created_at: datetime
     updated_at: datetime
 
 
-# ==================== Region Schemas ====================
+# ==================== Region Schemas (Схеми за региони/AOI) ====================
 
 class RegionBase(BaseSchema):
+    """Основни данни за регион (Area of Interest - AOI)."""
     name: str = Field(..., min_length=1, max_length=100)
     description: Optional[str] = Field(None, max_length=255)
-    area_km2: Optional[float] = Field(None, gt=0)
+    area_km2: Optional[float] = Field(None, gt=0) # Площта трябва да е по-голяма от 0
     type: Optional[str] = Field(default="aoi", pattern="^(aoi|exclusion)$")
 
 
 class RegionCreate(RegionBase):
+    """При създаване на регион се изисква геометрия в GeoJSON формат."""
     geometry: dict = Field(..., description="GeoJSON geometry (POLYGON)")
 
 
 class RegionUpdate(BaseSchema):
+    """За обновяване на регион всички полета са опционални."""
     name: Optional[str] = Field(None, min_length=1, max_length=100)
     description: Optional[str] = Field(None, max_length=255)
     area_km2: Optional[float] = Field(None, gt=0)
@@ -59,24 +73,27 @@ class RegionUpdate(BaseSchema):
 
 
 class RegionRead(RegionBase):
+    """Данни, които се връщат при заявка за четене на регион."""
     id: int
     created_at: datetime
     updated_at: datetime
 
 
-# ==================== Scene Schemas ====================
+# ==================== Scene Schemas (Схеми за сателитни сцени) ====================
 
 class SceneBase(BaseSchema):
+    """Основни атрибути на сателитна сцена (снимка от Sentinel-2)."""
     scene_id: str = Field(..., min_length=1, max_length=100)
     display_name: Optional[str] = Field(None, max_length=100)
     acquisition_date: date
     satellite: str = Field(default="Sentinel-2", max_length=50)
-    cloud_cover: Optional[float] = Field(None, ge=0, le=100)
+    cloud_cover: Optional[float] = Field(None, ge=0, le=100) # Облачност в проценти (0-100)
     tile: Optional[str] = Field(None, max_length=20)
     path: Optional[str] = Field(None, max_length=255)
 
 
 class SceneCreate(SceneBase):
+    """При създаване е задължително да се посочи към кой регион принадлежи сцената."""
     region_id: int = Field(..., gt=0)
 
 
@@ -97,7 +114,7 @@ class SceneRead(SceneBase):
     updated_at: datetime
 
 
-# ==================== IndexType Schemas ====================
+# ==================== IndexType Schemas (Видове индекси - NDVI, NDWI и др.) ====================
 
 class IndexTypeBase(BaseSchema):
     name: str = Field(..., min_length=1, max_length=50)
@@ -212,11 +229,17 @@ class ModelRunRead(ModelRunBase):
 # ==================== ShapValue Schemas ====================
 
 class ShapValueBase(BaseSchema):
+    """
+    Основни данни за SHAP (SHapley Additive exPlanations) стойности.
+    Използват се за обяснение на резултатите от Machine Learning модела 
+    (кое свойство/признак колко е повлияло на решението).
+    """
     feature_name: str = Field(..., max_length=100)
     value: float
 
 
 class ShapValueCreate(ShapValueBase):
+    """Свързване на SHAP стойност с конкретно изпълнение на модела, сцена и тип индекс."""
     model_run_id: int = Field(..., gt=0)
     scene_id: int = Field(..., gt=0)
     index_type_id: int = Field(..., gt=0)
@@ -236,7 +259,7 @@ class ShapValueRead(ShapValueBase):
     updated_at: datetime
 
 
-# ==================== ClassificationResult Schemas ====================
+# ==================== ClassificationResult Schemas (Резултати от класификация) ====================
 
 class ClassificationResultBase(BaseSchema):
     label: str = Field(..., max_length=100)
@@ -292,28 +315,35 @@ class ETLJobRead(ETLJobBase):
     updated_at: datetime
 
 
-# ==================== AOI Analysis Schemas ====================
+# ==================== AOI Analysis Schemas (Заявки за анализ на регион) ====================
 
 class AoiAnalysisRequest(BaseSchema):
-    """Request body for user-driven AOI analysis."""
+    """
+    Request body (тяло на заявката) за стартиране на анализ, 
+    дефиниран от потребителя (user-driven AOI analysis).
+    """
     bbox: list[float] = Field(
         ...,
         min_length=4, max_length=4,
-        description="[minLon, minLat, maxLon, maxLat]"
+        description="[minLon, minLat, maxLon, maxLat] - Граници на географската зона"
     )
     aoi_name: Optional[str] = Field(None, max_length=100)
     display_name: Optional[str] = Field(None, max_length=100)
-    cloud_max: Optional[int] = Field(20, ge=0, le=100)
+    cloud_max: Optional[int] = Field(20, ge=0, le=100) # Максимален процент облачност
 
 
 class AoiAnalysisResponse(BaseSchema):
-    """Immediate response — job created, poll /scenes/etl-status for progress."""
+    """
+    Отговор при успешно създаване на заявка за анализ. 
+    Тъй като процесът е бавен, връщаме ID на задачата (job_id), 
+    чрез което frontend-ът да проверява прогреса (polling).
+    """
     job_id: int
     status: str
     message: str
 
 
-# ==================== ErrorLog Schemas ====================
+# ==================== ErrorLog Schemas (Логване на грешки) ====================
 
 class ErrorLogBase(BaseSchema):
     level: str = Field(default="ERROR", pattern="^(DEBUG|INFO|WARNING|ERROR|CRITICAL)$")

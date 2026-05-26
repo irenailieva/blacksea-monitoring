@@ -2,6 +2,8 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
+// Компонент Table (Таблица)
+// Основен контейнер за таблични данни. Обвит е в div с overflow-auto за хоризонтално скролиране при малки екрани.
 const Table = React.forwardRef<
     HTMLTableElement,
     React.HTMLAttributes<HTMLTableElement>
@@ -16,6 +18,7 @@ const Table = React.forwardRef<
 ))
 Table.displayName = "Table"
 
+// Компонент TableHeader (Заглавна част на таблицата - <thead>)
 const TableHeader = React.forwardRef<
     HTMLTableSectionElement,
     React.HTMLAttributes<HTMLTableSectionElement>
@@ -24,18 +27,21 @@ const TableHeader = React.forwardRef<
 ))
 TableHeader.displayName = "TableHeader"
 
+// Компонент TableBody (Тяло на таблицата - <tbody>)
 const TableBody = React.forwardRef<
     HTMLTableSectionElement,
     React.HTMLAttributes<HTMLTableSectionElement>
 >(({ className, ...props }, ref) => (
     <tbody
         ref={ref}
-        className={cn("[&_tr:last-child]:border-0", className)}
+        className={cn("[&_tr:last-child]:border-0", className)} // Премахва долния бордюр на последния ред
         {...props}
     />
 ))
 TableBody.displayName = "TableBody"
 
+// Компонент TableFooter (Долна част на таблицата - <tfoot>)
+// Обикновено се използва за обобщени данни или суми.
 const TableFooter = React.forwardRef<
     HTMLTableSectionElement,
     React.HTMLAttributes<HTMLTableSectionElement>
@@ -51,6 +57,7 @@ const TableFooter = React.forwardRef<
 ))
 TableFooter.displayName = "TableFooter"
 
+// Компонент TableRow (Ред в таблицата - <tr>)
 const TableRow = React.forwardRef<
     HTMLTableRowElement,
     React.HTMLAttributes<HTMLTableRowElement>
@@ -58,7 +65,7 @@ const TableRow = React.forwardRef<
     <tr
         ref={ref}
         className={cn(
-            "border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted",
+            "border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted", // Ефект при посочване с мишката
             className
         )}
         {...props}
@@ -66,6 +73,7 @@ const TableRow = React.forwardRef<
 ))
 TableRow.displayName = "TableRow"
 
+// Компонент TableHead (Заглавна клетка - <th>)
 const TableHead = React.forwardRef<
     HTMLTableCellElement,
     React.ThHTMLAttributes<HTMLTableCellElement>
@@ -81,6 +89,7 @@ const TableHead = React.forwardRef<
 ))
 TableHead.displayName = "TableHead"
 
+// Компонент TableCell (Обикновена клетка - <td>)
 const TableCell = React.forwardRef<
     HTMLTableCellElement,
     React.TdHTMLAttributes<HTMLTableCellElement>
@@ -93,6 +102,7 @@ const TableCell = React.forwardRef<
 ))
 TableCell.displayName = "TableCell"
 
+// Компонент TableCaption (Надпис/заглавие на таблицата - <caption>)
 const TableCaption = React.forwardRef<
     HTMLTableCaptionElement,
     React.HTMLAttributes<HTMLTableCaptionElement>

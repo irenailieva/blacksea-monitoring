@@ -12,11 +12,17 @@ from .base import CRUDBase
 
 
 class CRUDScene(CRUDBase[Scene]):
-    """CRUD операции за Scene."""
+    """
+    CRUD операции за модела Scene (Сателитна сцена).
+    """
     
     def create(self, db: Session, *, obj_in: SceneCreate) -> Scene:
-        """Създава нова сцена."""
-        # Проверка за съществуваща сцена с това scene_id
+        """
+        Създава нова сцена. Включва проверки за валидност на региона 
+        и уникалност на идентификатора на сцената (scene_id).
+        """
+        # Проверка дали вече съществува сцена с този идентификатор,
+        # за да се избегне дублиране на данни при многократно изтегляне.
         existing = db.query(Scene).filter(Scene.scene_id == obj_in.scene_id).first()
         if existing:
             raise HTTPException(
@@ -24,7 +30,8 @@ class CRUDScene(CRUDBase[Scene]):
                 detail="Scene with this scene_id already exists"
             )
         
-        # Проверка за съществуващ регион
+        # Проверка дали посоченият регион съществува в базата данни.
+        # Всяка сцена трябва да е обвързана с валиден регион.
         region = db.query(Region).filter(Region.id == obj_in.region_id).first()
         if not region:
             raise HTTPException(
@@ -32,7 +39,7 @@ class CRUDScene(CRUDBase[Scene]):
                 detail="Region not found"
             )
         
-        # Създаване на сцена
+        # Инициализиране на ORM обекта
         db_scene = Scene(
             scene_id=obj_in.scene_id,
             acquisition_date=obj_in.acquisition_date,
@@ -48,7 +55,7 @@ class CRUDScene(CRUDBase[Scene]):
         return db_scene
     
     def get_by_scene_id(self, db: Session, *, scene_id: str) -> Optional[Scene]:
-        """Връща сцена по scene_id."""
+        """Търси и връща сцена по нейния уникален стринг идентификатор (scene_id)."""
         return db.query(Scene).filter(Scene.scene_id == scene_id).first()
     
     def get_by_region(
@@ -59,7 +66,10 @@ class CRUDScene(CRUDBase[Scene]):
         skip: int = 0,
         limit: int = 100
     ) -> List[Scene]:
-        """Връща сцени по регион."""
+        """
+        Връща списък със сцени, които принадлежат на конкретен регион.
+        Поддържа пагинация чрез параметрите skip и limit.
+        """
         return (
             db.query(Scene)
             .filter(Scene.region_id == region_id)

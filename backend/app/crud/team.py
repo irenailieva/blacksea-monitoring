@@ -8,12 +8,20 @@ from app.schemas import TeamCreate, TeamUpdate, TeamMembershipCreate, TeamMember
 
 
 class CRUDTeam(CRUDBase[Team]):
+    """CRUD операции за управление на екипи (Teams)."""
+    
     def get_by_name(self, db: Session, *, name: str) -> Optional[Team]:
+        """Търси екип по име."""
         return db.query(Team).filter(Team.name == name).first()
     
     def get_multi_with_members(
         self, db: Session, *, skip: int = 0, limit: int = 100
     ) -> List[Team]:
+        """
+        Връща списък от екипи, като едновременно (eager load) зарежда техните 
+        членове (потребители), за да се избегне N+1 заявки проблем.
+        Използва `joinedload` от SQLAlchemy.
+        """
         return (
             db.query(Team)
             .options(joinedload(Team.members).joinedload(TeamMembership.user))
@@ -23,6 +31,7 @@ class CRUDTeam(CRUDBase[Team]):
         )
         
     def get_with_members(self, db: Session, id: int) -> Optional[Team]:
+        """Връща конкретен екип заедно с всичките му членове."""
         return (
             db.query(Team)
             .options(joinedload(Team.members).joinedload(TeamMembership.user))

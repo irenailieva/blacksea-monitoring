@@ -9,15 +9,19 @@ if TYPE_CHECKING:
     from .shap_value import ShapValue
 
 class IndexType(Base):
-    """Model representing different types of indices that can be calculated."""
-    __tablename__ = "index_types"  # Changed to plural for consistency
+    """
+    ORM модел за видовете индекси (напр. NDVI, NDWI).
+    Определя метаданните за индекса (име, описание, формула).
+    """
+    __tablename__ = "index_types"  # Множествено число за консистентност
 
-    # No need to define id as it's inherited from Base
-    name: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
-    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    formula: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    # Полето 'id' се наследява автоматично от базовия клас Base.
+    name: Mapped[str] = mapped_column(String(50), unique=True, nullable=False) # Уникално име на индекса
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True) # Описание на това какво измерва
+    formula: Mapped[Optional[str]] = mapped_column(String(255), nullable=True) # Математическа формула (напр. (NIR-Red)/(NIR+Red))
 
-    # Relationships
+    # Връзки (Relationships)
+    # Списък от всички изчислени стойности за този тип индекс
     values: Mapped[List["IndexValue"]] = relationship(
         back_populates="index_type",
         cascade="all, delete-orphan"
@@ -25,4 +29,5 @@ class IndexType(Base):
     shap_values: Mapped[List["ShapValue"]] = relationship(back_populates="index_type", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
+        """Стрингова репрезентация за дебъгване."""
         return f"<IndexType(name='{self.name}')>"

@@ -2,6 +2,8 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
+// Компонент Card (Карта)
+// Основен контейнер за групиране на свързано съдържание, стилизиран с рамка и сянка.
 const Card = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
@@ -13,6 +15,8 @@ const Card = React.forwardRef<
 ))
 Card.displayName = "Card"
 
+// Компонент CardHeader (Заглавна част на картата)
+// Контейнер за заглавието и описанието. Добавя вътрешни отстояния (padding).
 const CardHeader = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
@@ -24,6 +28,8 @@ const CardHeader = React.forwardRef<
 ))
 CardHeader.displayName = "CardHeader"
 
+// Компонент CardTitle (Заглавие на картата)
+// Стилизира основния текст в заглавната част с по-голям и удебелен шрифт.
 const CardTitle = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
@@ -35,6 +41,8 @@ const CardTitle = React.forwardRef<
 ))
 CardTitle.displayName = "CardTitle"
 
+// Компонент CardDescription (Описание на картата)
+// Помощен текст под заглавието със заглушен (muted) цвят.
 const CardDescription = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
@@ -46,6 +54,8 @@ const CardDescription = React.forwardRef<
 ))
 CardDescription.displayName = "CardDescription"
 
+// Компонент CardContent (Съдържание на картата)
+// Основната секция на картата, където се поставят данните или формите.
 const CardContent = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
@@ -54,6 +64,8 @@ const CardContent = React.forwardRef<
 ))
 CardContent.displayName = "CardContent"
 
+// Компонент CardFooter (Долна част / Футър на картата)
+// Използва се обикновено за бутони или действия (напр. "Запази", "Отказ").
 const CardFooter = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>

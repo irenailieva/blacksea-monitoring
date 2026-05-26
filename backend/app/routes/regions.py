@@ -11,6 +11,7 @@ from app.models.user import User
 from app import schemas
 from app.crud import region as crud_region
 
+# Рутерът за регионите (Area of Interest - AOI), като заливи, езера и други наблюдаеми зони.
 router = APIRouter(prefix="/regions", tags=["regions"])
 
 
@@ -20,7 +21,12 @@ def create_region(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_any_role("researcher", "admin"))
 ):
-    """Създава нов регион. Изисква researcher или admin роля."""
+    """
+    Създава нов географски регион (Area of Interest - AOI). 
+    Тези региони се използват за филтриране и ограничаване на сателитния анализ до конкретни географски полигони.
+    Изисква researcher или admin роля.
+    """
+    # Добавя новия регион в базата (като включва геометрията му - обикновено GeoJSON или WKT формат).
     return crud_region.create(db=db, obj_in=region_in)
 
 
@@ -32,9 +38,18 @@ def read_regions(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Връща списък от региони. Изисква автентикация."""
+    """
+    Връща списък от региони. 
+    Тъй като геометрията (geometry - полигон) може да бъде много тежка като обем данни,
+    е въведен флагът 'with_geometry'. По подразбиране е False, което връща само метаданните.
+    Ако клиентът изрично подаде with_geometry=True, ще се зареди и върне пълният полигон
+    за визуализация върху картата (напр. в Leaflet).
+    """
     if with_geometry:
+        # Извличане на регионите заедно с техните пространствени геометрии
         return crud_region.get_multi_with_geometry(db=db, skip=skip, limit=limit)
+        
+    # Извличане на регионите без тежката геометрия, полезно за падащи менюта и списъци
     return crud_region.get_multi(db=db, skip=skip, limit=limit)
 
 
@@ -44,7 +59,10 @@ def read_region(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Връща регион по ID. Изисква автентикация."""
+    """
+    Връща детайлна информация за конкретен регион по неговото ID.
+    Обикновено този метод също връща геометрията, защото се отнася само за един обект.
+    """
     db_region = crud_region.get(db=db, id=region_id)
     if not db_region:
         raise HTTPException(
@@ -61,7 +79,10 @@ def update_region(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_any_role("researcher", "admin"))
 ):
-    """Обновява регион. Изисква researcher или admin роля."""
+    """
+    Обновява данните за даден регион (име, граници, тип).
+    Изисква високо ниво на права (researcher или admin).
+    """
     db_region = crud_region.get(db=db, id=region_id)
     if not db_region:
         raise HTTPException(
@@ -77,7 +98,12 @@ def delete_region(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_any_role("admin"))
 ):
-    """Изтрива регион. Изисква admin роля."""
+    """
+    Изтрива регион от базата. 
+    Всички свързани с него сцени и резултати могат също да бъдат изтрити каскадно 
+    (в зависимост от конфигурацията на базата данни).
+    Затова операцията е ограничена само до 'admin'.
+    """
     db_region = crud_region.get(db=db, id=region_id)
     if not db_region:
         raise HTTPException(
@@ -86,4 +112,3 @@ def delete_region(
         )
     crud_region.delete(db=db, id=region_id)
     return None
-

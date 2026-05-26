@@ -13,11 +13,17 @@ from .base import CRUDBase
 
 
 class CRUDRegion(CRUDBase[Region]):
-    """CRUD операции за Region с геопространствени данни."""
+    """
+    CRUD операции за модела Region. 
+    Те включват специфична обработка на геопространствени данни (geometry).
+    """
     
     def create(self, db: Session, *, obj_in: RegionCreate) -> Region:
-        """Създава нов регион с геопространствени данни."""
-        # Проверка за съществуващ регион с това име
+        """
+        Създава нов регион. Първо проверява за конфликт на името, 
+        след което конвертира GeoJSON полигона в PostGIS формат.
+        """
+        # Проверка дали вече не съществува регион със същото име
         existing = db.query(Region).filter(Region.name == obj_in.name).first()
         if existing:
             raise HTTPException(
@@ -25,14 +31,15 @@ class CRUDRegion(CRUDBase[Region]):
                 detail="Region with this name already exists"
             )
         
-        # Конвертиране на GeoJSON geometry към PostGIS Geometry
+        # Трансформиране на GeoJSON (от HTTP заявката) към геометрия на базата (PostGIS)
         try:
-            geom = shape(obj_in.geometry)
+            geom = shape(obj_in.geometry) # Създаване на Shapely обект
             if geom.geom_type != "Polygon":
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Geometry must be a Polygon"
+                    detail="Geometry must be a Polygon" # Системата поддържа само полигони
                 )
+            # Конвертиране в WKB (Well-Known Binary) формат за PostGIS (srid=4326 за WGS84)
             geometry = from_shape(geom, srid=4326)
         except Exception as e:
             raise HTTPException(
@@ -40,7 +47,7 @@ class CRUDRegion(CRUDBase[Region]):
                 detail=f"Invalid geometry: {str(e)}"
             )
         
-        # Създаване на регион
+        # Създаване и запазване на региона
         db_region = Region(
             name=obj_in.name,
             description=obj_in.description,
@@ -98,8 +105,11 @@ class CRUDRegion(CRUDBase[Region]):
 
 
     def get_multi(self, db: Session, *, skip: int = 0, limit: int = 100) -> List[dict]:
-        """Връща списък от региони като речници, избягвайки geometry проблеми."""
-        # Fetch all scalar fields explicitly, skipping geometry
+        """
+        Връща списък от региони като речници, без да натоварва отговора с тежките 
+        геометрични данни (geometry). Подходящо за таблични изгледи в frontend-а.
+        """
+        # Експлицитно извличане само на скаларните полета (без geometry)
         results = db.query(
             Region.id,
             Region.name,
@@ -110,7 +120,7 @@ class CRUDRegion(CRUDBase[Region]):
             Region.updated_at
         ).offset(skip).limit(limit).all()
         
-        # Convert rows to dicts for Pydantic
+        # Конвертиране на резултатите от базата в списък от речници
         return [
             {
                 "id": r.id,
@@ -125,7 +135,10 @@ class CRUDRegion(CRUDBase[Region]):
         ]
     
     def get_multi_with_geometry(self, db: Session, *, skip: int = 0, limit: int = 100) -> List[dict]:
-        """Връща списък от региони с geometry като GeoJSON."""
+        """
+        Връща списък от региони, заедно с техните геометрии, конвертирани в GeoJSON.
+        Използва се, когато frontend-ът трябва да визуализира полигоните върху картата.
+        """
         from geoalchemy2.shape import to_shape
         from sqlalchemy import func
         
@@ -134,7 +147,7 @@ class CRUDRegion(CRUDBase[Region]):
         result = []
         for region in regions:
             try:
-                # Convert PostGIS geometry to GeoJSON
+                # Преобразуване на PostGIS формата в четим от браузъра GeoJSON
                 geom = to_shape(region.geometry)
                 geojson = {
                     "type": "Polygon",
@@ -157,5 +170,6 @@ class CRUDRegion(CRUDBase[Region]):
         
         return result
 
+# Инициализация на CRUD обекта за региони
 region = CRUDRegion(Region)
 

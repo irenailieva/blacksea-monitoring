@@ -5,23 +5,34 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap, BoundaryNorm
 from pathlib import Path
 
-# Paths
+# ==============================================================================
+# КОНФИГУРАЦИЯ НА ПЪТИЩАТА ДО ФАЙЛОВЕТЕ
+# Задаваме основните пътища до входните и изходните файлове за обработка.
+# BASE_DIR е базовата директория, където се намират данните.
+# ==============================================================================
 BASE_DIR = Path("/app/data/inference/lake-vaya")
-INPUT_TIF = BASE_DIR / "output_classification.tif"
-SCL_PATH = BASE_DIR / "T35TNH_20230606T085559_SCL_20m.jp2"
-OUTPUT_PNG = BASE_DIR / "final_vaya_map.png"
+INPUT_TIF = BASE_DIR / "output_classification.tif" # Входен файл с резултата от класификацията
+SCL_PATH = BASE_DIR / "T35TNH_20230606T085559_SCL_20m.jp2" # SCL маска от Sentinel-2 (Scene Classification Layer)
+OUTPUT_PNG = BASE_DIR / "final_vaya_map.png" # Изходен файл за визуализация
 
 def apply_mask():
-    print("--- Applying Land Mask to Lake Vaya Map ---")
+    """
+    Функция за прилагане на маска на сушата върху класификационната карта на езерото Вая.
+    Целта е да се премахнат фалшиво положителните резултати, които попадат на сушата.
+    """
+    print("--- Прилагане на маска на сушата (Land Mask) върху картата на езерото Вая ---")
     
-    # 1. Read Classification Result (10m)
+    # 1. Зареждане на резултата от класификацията (разделителна способност 10m)
+    # rasterio.open отваря географския TIF файл.
     with rasterio.open(INPUT_TIF) as src_tif:
-        print(f"Reading Classification Map: {src_tif.shape}")
-        classification = src_tif.read(1)
-        profile = src_tif.profile
+        print(f"Четене на класификационната карта с размери: {src_tif.shape}")
+        classification = src_tif.read(1) # Четем първия банд (канал) от TIF файла
+        profile = src_tif.profile # Запазваме профила (метаданните) на TIF файла
         
-    # 2. Read SCL (20m) and Upscale
-    print("Reading and Upscaling SCL Mask...")
+    # 2. Зареждане на SCL маската (разделителна способност 20m) и мащабиране (Upscaling)
+    # Понеже класификацията е 10m, а SCL маската е 20m, трябва да преоразмерим SCL маската
+    # до размерите на класификацията, за да съвпаднат пикселите. Използваме метод "най-близък съсед" (nearest).
+    print("Четене и мащабиране на SCL маската...")
     with rasterio.open(SCL_PATH) as src_scl:
         scl = src_scl.read(
             1,
@@ -29,44 +40,51 @@ def apply_mask():
             resampling=Resampling.nearest
         )
         
-    # 3. Create Mask
-    # SCL 4 = Vegetation, 5 = Bare Soils
-    # We want to mask these out to remove false positives on land
+    # 3. Създаване на маската
+    # В SCL класификацията на Sentinel-2:
+    # 4 означава растителност (Vegetation)
+    # 5 означава голи почви (Bare Soils)
+    # Комбинираме ги чрез логическо ИЛИ (|), за да създадем маска на сушата.
     land_mask = (scl == 4) | (scl == 5)
-    print(f"Masked Pixels: {np.sum(land_mask)} / {land_mask.size} ({np.sum(land_mask)/land_mask.size:.2%} of scene)")
+    print(f"Брой маскирани пиксели: {np.sum(land_mask)} / {land_mask.size} ({np.sum(land_mask)/land_mask.size:.2%} от сцената)")
     
-    # 4. Visualization Logic
-    # Classes: 10 (Abiotic), 20 (Veg), 30 (Water)
-    # Plus 0/255 for NoData
+    # 4. Логика за визуализация
+    # Класовете в нашата класификация са:
+    # 10 - Абиотични фактори (напр. скали, пясък)
+    # 20 - Растителност във водата
+    # 30 - Дълбока вода
+    # 0 или 255 - Липса на данни (NoData)
     
-    # Create RGBA array
-    # Shape: (H, W, 4)
+    # Създаваме празен масив за RGBA (Червено, Зелено, Синьо, Алфа канал за прозрачност)
+    # Форматът е (Височина, Ширина, 4), а типът данни е uint8 (0-255).
     height, width = classification.shape
     rgba = np.zeros((height, width, 4), dtype=np.uint8)
     
-    # Define Colors (R, G, B, A)
-    # Class 10: Abiotic (Grey/Brown) - e.g. Rocks/Sand inside water or shore
+    # Дефиниране на цветовете (R, G, B, A)
+    # Клас 10: Абиотични - цвят сиво/кафяво
     c10 = [160, 140, 120, 255]
-    # Class 20: Vegetation (Vibrant Green)
+    # Клас 20: Водна растителност - ярко зелено
     c20 = [0, 255, 0, 255]
-    # Class 30: Deep Water (Blue)
+    # Клас 30: Дълбока вода - синьо
     c30 = [0, 100, 255, 255]
     
-    # Apply Colors
+    # Прилагане на цветовете върху масива въз основа на стойностите от класификацията
     rgba[classification == 10] = c10
     rgba[classification == 20] = c20
     rgba[classification == 30] = c30
     
-    # Apply Land Mask (Set Alpha to 0)
+    # Прилагане на маската на сушата
+    # Задаваме алфа канала (прозрачност) на 0 за всички пиксели, които са идентифицирани като суша.
     rgba[land_mask, 3] = 0
     
-    # Also mask NoData (255)
+    # Също така скриваме (правим прозрачни) пикселите без данни (NoData = 255)
     rgba[classification == 255, 3] = 0
 
-    # 5. Save
-    print(f"Saving to {OUTPUT_PNG}...")
+    # 5. Запазване на резултата
+    # Записваме генерираното изображение като PNG файл.
+    print(f"Запазване на изображението в {OUTPUT_PNG}...")
     plt.imsave(OUTPUT_PNG, rgba)
-    print("Done.")
+    print("Готово.")
 
 if __name__ == "__main__":
     apply_mask()

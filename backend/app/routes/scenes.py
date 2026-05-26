@@ -14,40 +14,55 @@ from app import schemas
 from app.crud import scene as crud_scene
 from app.crud import etl_job as crud_etl_job
 
+# Взимаме базовия URL на Machine Learning (ML) услугата от променливите на обкръжението.
+# Ако не е зададен, използваме подразбиращия се вътрешен адрес "http://ml:8500".
 ML_BASE_URL = os.getenv("ML_BASE_URL", "http://ml:8500")
 
 def to_ml_path(p: str) -> str:
-    """Translates backend-relative path (/app/ml/...) to ML container path (/app/...)."""
+    """
+    Превежда пътя от файловата система на бекенд контейнера към съответстващия път в ML контейнера.
+    Тъй като двата контейнера може да имат различни точки на монтиране (mount points) на едни и същи 
+    docker volumes, тази функция гарантира, че ML услугата ще намери файла.
+    """
     abs_p = os.path.abspath(p)
+    # Заменя специфичния за бекенда префикс "/app/ml/" с общия за ML услугата "/app/".
     if "/app/ml/" in abs_p:
         return abs_p.replace("/app/ml/", "/app/")
     return p
 
 async def trigger_ml_inference(job_id: int, scene_id_int: int, file_path: str):
-    """Calls the ML service and keeps the ETL job status updated throughout."""
+    """
+    Асинхронна фонова задача, която извиква ML услугата за анализ (inference) на сателитна снимка
+    и поддържа статуса на ETL (Extract, Transform, Load) задачата актуален в базата данни.
+    """
+    # Тъй като се изпълнява във фонов режим (извън обхвата на FastAPI request-а),
+    # тук трябва ръчно да създадем и управляваме сесията към базата данни.
     from app.core.database import SessionLocal
     db = SessionLocal()
     try:
-        # Fetch the string scene_id for consistent filename naming
+        # Извличаме записа за сцената от базата данни, за да използваме нейния уникален стринг идентификатор.
+        # Това помага за консистентно именуване на генерираните файлове.
         from app.crud.scene import scene as crud_scene_local
         db_scene = crud_scene_local.get(db, id=scene_id_int)
         scene_id_str = db_scene.scene_id if db_scene else f"scene_{scene_id_int}"
 
-        # Transition to processing
+        # 1. Промяна на статуса на ETL задачата: от "pending" (чакаща) на "processing" (в процес).
         db_job = crud_etl_job.etl_job.get(db, id=job_id)
         if db_job:
             payload_update = dict(db_job.payload or {})
-            payload_update["progress"] = 10
+            payload_update["progress"] = 10  # Задаваме начален прогрес от 10%
             crud_etl_job.etl_job.update(
                 db, db_obj=db_job,
                 obj_in={"status": "processing", "payload": payload_update}
             )
 
-        # Translate path for the ML container which is mounted differently
+        # 2. Подготовка на пътищата до файловете
         ml_file_path = to_ml_path(file_path)
-        # Use inference/ subfolder and the string ID prefix
         output_path = to_ml_path(f"/app/ml/data/inference/{scene_id_str}_classification.tif")
 
+        # 3. Изграждане на JSON заявка за ML модела
+        # За ML алгоритъма (напр. Random Forest или XGBoost) е необходимо да подадем пътищата
+        # до отделните спектрални канали (B2, B3, B4, B8) и маската за класификация (SCL).
         ml_payload = {
             "b2": ml_file_path,
             "b3": ml_file_path,
@@ -57,23 +72,31 @@ async def trigger_ml_inference(job_id: int, scene_id_int: int, file_path: str):
             "output_path": output_path
         }
 
+        # 4. Извършване на HTTP POST заявка към вътрешния ML микросървис
         async with httpx.AsyncClient(timeout=300.0) as client:
             r = await client.post(f"{ML_BASE_URL}/process_scene", json=ml_payload)
             if r.status_code != 200:
                 print(f"ML Processing failed for scene {scene_id_str}: {r.status_code} - {r.text}")
+            # Извиква изключение, ако отговорът не е HTTP 200 OK
             r.raise_for_status()
 
         print(f"ML Processing completed successfully for scene {scene_id_str}")
+        
+        # 5. При успешен отговор актуализираме статуса на задачата на "completed" (завършена).
         db_job = crud_etl_job.etl_job.get(db, id=job_id)
         if db_job:
             payload_done = dict(db_job.payload or {})
             payload_done["progress"] = 100
             crud_etl_job.etl_job.update(
                 db, db_obj=db_job,
-                obj_in={"status": "completed", "payload": payload_done,
-                        "finished_at": datetime.utcnow()}
+                obj_in={
+                    "status": "completed", 
+                    "payload": payload_done,
+                    "finished_at": datetime.utcnow()
+                }
             )
     except Exception as e:
+        # 6. В случай на възникнала грешка в който и да е етап, отбелязваме задачата като "failed"
         print(f"Failed to trigger ML processing: {e}")
         db_job = crud_etl_job.etl_job.get(db, id=job_id)
         if db_job:
@@ -82,8 +105,10 @@ async def trigger_ml_inference(job_id: int, scene_id_int: int, file_path: str):
                 obj_in={"status": "failed", "finished_at": datetime.utcnow()}
             )
     finally:
+        # Винаги затваряме сесията към базата данни, за да предотвратим изтичане на ресурси (memory leaks)
         db.close()
 
+# Инициализиране на рутер за маршрути, свързани със "Сцени" (Сателитни снимки)
 router = APIRouter(prefix="/scenes", tags=["scenes"])
 
 
@@ -93,7 +118,10 @@ def create_scene(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_any_role("researcher", "admin"))
 ):
-    """Създава нова сцена. Изисква researcher или admin роля."""
+    """
+    Създава нов запис за сцена в базата данни.
+    Тази функционалност е защитена и изисква роля 'researcher' или 'admin'.
+    """
     return crud_scene.create(db=db, obj_in=scene_in)
 
 
@@ -105,15 +133,23 @@ def read_scenes(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Връща списък от сцени. Изисква автентикация."""
+    """
+    Връща списък със сателитни сцени, подредени в обратен хронологичен ред (от най-новите към най-старите).
+    Потребителят трябва да е вписан в системата. Поддържа се филтриране по географски регион (region_id).
+    """
     from app.models.scene import Scene
     
     print(f"[DEBUG] Fetching scenes for user {current_user.username}, region_id={region_id}")
     
+    # Филтрираме заявката, така че да показва само сцени, за които вече има генерирани резултати 
+    # от класификацията (classification_results.any()).
     query = db.query(Scene).filter(Scene.classification_results.any())
+    
+    # Ако е предоставен region_id, добавяме допълнителен WHERE филтър.
     if region_id:
         query = query.filter(Scene.region_id == region_id)
         
+    # Извличане с отместване (offset) и ограничение (limit) за странициране (pagination).
     res = query.order_by(Scene.acquisition_date.desc(), Scene.id.desc()).offset(skip).limit(limit).all()
     
     print(f"[DEBUG] Returning {len(res)} scenes")
@@ -125,8 +161,11 @@ def get_etl_status(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Returns the 10 most recent ETL jobs (active + recently finished)."""
-    # Always return recent jobs so UI can reflect transitions from pending → completed/failed
+    """
+    Връща статус на последните 10 задачи от ETL конвейера (Pipeline).
+    Използва се от frontend-а за визуализация в реално време на прогреса 
+    (например progress bar компоненти в потребителския интерфейс).
+    """
     return crud_etl_job.etl_job.get_recent_jobs(db, limit=10)
 
 @router.get("/{scene_id}", response_model=schemas.SceneRead)
@@ -135,7 +174,10 @@ def read_scene(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Връща сцена по ID. Изисква автентикация."""
+    """
+    Търси и връща детайлна информация за конкретна сцена въз основа на нейното ID.
+    Изисква автентикация.
+    """
     db_scene = crud_scene.get(db=db, id=scene_id)
     if not db_scene:
         raise HTTPException(
@@ -152,7 +194,10 @@ def update_scene(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_any_role("researcher", "admin"))
 ):
-    """Обновява сцена. Изисква researcher или admin роля."""
+    """
+    Обновява данните на съществуваща сцена.
+    Изисква високи права за достъп (researcher или admin).
+    """
     db_scene = crud_scene.get(db=db, id=scene_id)
     if not db_scene:
         raise HTTPException(
@@ -168,7 +213,10 @@ def delete_scene(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_any_role("admin"))
 ):
-    """Изтрива сцена. Изисква admin роля."""
+    """
+    Изтрива сателитна сцена от базата данни.
+    Това е високорискова операция и е позволена единствено на потребители с роля 'admin'.
+    """
     db_scene = crud_scene.get(db=db, id=scene_id)
     if not db_scene:
         raise HTTPException(
@@ -186,21 +234,25 @@ async def upload_scene_file(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_any_role("researcher", "admin"))
 ):
-    """Upload a GeoTIFF and queue it for ML inference.
-    Re-uploading the same filename is supported — a timestamp suffix
-    makes each upload a distinct scene_id so there are no conflicts.
     """
+    Маршрут за ръчно качване на GeoTIFF файлове от потребителя.
+    Файлът се запазва локално и се нарежда на опашката за ML анализ (Machine Learning).
+    Има логика за избягване на дублиране на файлови имена чрез добавяне на времеви маркер (timestamp).
+    """
+    # 1. Създаване на директория за запазване (ако не съществува)
     upload_dir = Path("/app/ml/data/uploads")
     upload_dir.mkdir(parents=True, exist_ok=True)
 
-    # Build a unique stem: original_name + UTC timestamp (seconds precision)
+    # 2. Генериране на уникално име, базирано на датата и часа по Гринуич (UTC)
     ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
     stem = Path(file.filename).stem
     suffix = Path(file.filename).suffix or ".tif"
     unique_filename = f"{stem}_{ts}{suffix}"
-    scene_id_str = f"{stem}_{ts}"          # guaranteed unique per-upload
+    scene_id_str = f"{stem}_{ts}"
 
     file_path = upload_dir / unique_filename
+    
+    # 3. Запазване на файла на диска чрез копиране на бинарните данни
     try:
         with file_path.open("wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
@@ -214,9 +266,13 @@ async def upload_scene_file(
     try:
         import rasterio
         from sqlalchemy import func
+        
+        # 4. Прочитане на метаданните на качения GeoTIFF чрез rasterio
         with rasterio.open(str(file_path)) as src:
             bounds = src.bounds
             
+        # 5. Търсене на географско припокриване (intersection) между снимката и съществуващите региони в базата.
+        # Използват се функции на PostGIS (ST_Intersects, ST_MakeEnvelope).
         intersecting = db.query(Region).filter(
             ~Region.name.like("AOI_%"),
             ~Region.name.like("aoi_%"),
@@ -227,8 +283,10 @@ async def upload_scene_file(
         ).first()
         
         if intersecting:
+            # Ако има припокриване, свързваме сцената с открития регион
             region_id = intersecting.id
         else:
+            # Ако не е открит регион, автоматично създаваме нов правоъгълен полигон (Area of Interest - AOI)
             aoi_name = f"AOI_{ts}"
             geom = {
                 "type": "Polygon",
@@ -242,7 +300,7 @@ async def upload_scene_file(
             }
             new_region = Region(
                 name=aoi_name,
-                description="Auto-generated AOI from manual upload",
+                description="Автоматично генериран регион (AOI) след ръчно качване",
                 area_km2=0.0,
                 geometry=func.ST_GeomFromGeoJSON(json.dumps(geom))
             )
@@ -253,10 +311,11 @@ async def upload_scene_file(
             
     except Exception as e:
         print(f"Geospatial mapping failed: {e}")
-        # Fallback if rasterio fails or not installed
+        # Запасен вариант (fallback): ако rasterio не е наличен или гръмне, задаваме ID на първия наличен регион
         region = db.query(Region).first()
         region_id = region.id if region else 1
 
+    # 6. Създаване на запис за сцената в базата данни
     scene_in = schemas.SceneCreate(
         scene_id=scene_id_str,
         acquisition_date=datetime.utcnow().date(),
@@ -266,10 +325,11 @@ async def upload_scene_file(
     try:
         db_scene = crud_scene.create(db=db, obj_in=scene_in)
     except HTTPException:
-        # If somehow still a conflict (edge case), clean up the file
+        # При конфликт (рядък сценарий), изтриваме вече запазения файл за да не задръстваме сървъра
         file_path.unlink(missing_ok=True)
         raise
 
+    # 7. Генериране на запис за ETL задача с тип "manual_upload"
     job_in = schemas.ETLJobCreate(
         job_type="manual_upload",
         status="pending",
@@ -282,6 +342,7 @@ async def upload_scene_file(
     )
     db_job = crud_etl_job.etl_job.create(db=db, obj_in=job_in.model_dump())
 
+    # 8. Добавяне на фонова задача, която да изпълни тежките ML изчисления без да блокира отговора към потребителя
     background_tasks.add_task(trigger_ml_inference, db_job.id, db_scene.id, str(file_path))
 
     return db_scene
@@ -291,7 +352,10 @@ async def trigger_automated_etl(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_any_role("researcher", "admin"))
 ):
-    """Triggers the automated Sentinel-2 ETL pipeline."""
+    """
+    Ръчно стартира напълно автоматизиран процес (ETL pipeline) за изтегляне на 
+    актуални Sentinel-2 сателитни данни от публичните каталози.
+    """
     job_in = schemas.ETLJobCreate(
         job_type="sentinel_auto_pipeline",
         status="pending",
@@ -300,10 +364,12 @@ async def trigger_automated_etl(
     db_job = crud_etl_job.etl_job.create(db=db, obj_in=job_in.model_dump())
     
     try:
+        # Изпращаме HTTP POST към външен микросървис (etl:8001), който отговаря за изтеглянето и обработката.
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.post("http://etl:8001/trigger", json={"job_id": db_job.id})
             resp.raise_for_status()
     except Exception as e:
+        # Ако външната услуга не отговори, маркираме задачата като "failed".
         status_update = schemas.ETLJobUpdate(status="failed")
         db_job = crud_etl_job.etl_job.update(db, db_obj=db_job, obj_in=status_update)
         raise HTTPException(status_code=500, detail=f"Failed to trigger ETL pipeline: {e}")
@@ -318,15 +384,14 @@ async def analyze_aoi(
     current_user: User = Depends(require_any_role("researcher", "admin"))
 ):
     """
-    User-driven AOI analysis flow.
-    Accepts a bounding box drawn on the map, queries STAC for the best available
-    Sentinel-2 scene over that area, runs the full ETL + ML pipeline, and stores
-    the classification result in the DB.
+    Потребителски-ориентиран анализ на конкретен правоъгълен полигон (Bounding Box / AOI).
+    Потребителят чертае зона на картата, системата пита външни STAC каталози за най-добрата 
+    Sentinel-2 сцена над тази територия и задейства ETL+ML конвейера.
     """
     bbox = request.bbox
     
-    # We should use the user-provided AOI name so that custom drawn AOIs 
-    # don't get conflated with existing regions and skipped by the ETL cache.
+    # Дефинираме уникално име на зоната, базирано на нейните координати.
+    # Това предотвратява кеширане и сблъсък с други предварително създадени зони.
     aoi_name = request.aoi_name or f"aoi_{bbox[0]:.3f}_{bbox[1]:.3f}"
 
     job_in = schemas.ETLJobCreate(
@@ -343,6 +408,7 @@ async def analyze_aoi(
     db_job = crud_etl_job.etl_job.create(db=db, obj_in=job_in.model_dump())
 
     try:
+        # Уведомяваме специализирания ETL микросървис да започне работа за зададения BBox.
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.post(
                 "http://etl:8001/trigger",
@@ -359,6 +425,7 @@ async def analyze_aoi(
         crud_etl_job.etl_job.update(db, db_obj=db_job, obj_in={"status": "failed"})
         raise HTTPException(status_code=500, detail=f"Failed to trigger AOI analysis: {e}")
 
+    # Информираме frontend-а, че задачата е стартирана успешно във фонов режим.
     return schemas.AoiAnalysisResponse(
         job_id=db_job.id,
         status="pending",
@@ -373,15 +440,20 @@ async def retry_etl_job(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_any_role("researcher", "admin"))
 ):
-    """Retry a failed or stuck ETL job.
-    - manual_upload: re-runs ML inference on the original file (no re-upload needed).
-    - sentinel_auto_pipeline: creates a brand-new pipeline trigger.
+    """
+    Служи за повторен опит (retry) при блокирала или провалена ETL задача.
+    Механиката е различна в зависимост от типа на задачата:
+    - manual_upload: Изпълнява наново ML модела върху съществуващия локален файл, без да е нужен нов ъплоуд.
+    - sentinel_auto_pipeline: Пресъздава изцяло нова заявка към външната ETL услуга.
     """
     from app.models.etl_job import ETLJob as ETLJobModel
+    
+    # Търсим проблемната задача в базата данни
     original = db.query(ETLJobModel).filter(ETLJobModel.id == job_id).first()
     if not original:
         raise HTTPException(status_code=404, detail="ETL job not found")
 
+    # Позволяваме рестартиране само на провалени или зациклили ("pending") задачи
     if original.status not in ("failed", "pending"):
         raise HTTPException(
             status_code=400,
@@ -389,6 +461,7 @@ async def retry_etl_job(
         )
 
     if original.job_type == "manual_upload":
+        # За ръчно качени файлове, проверяваме дали оригиналният файл все още е наличен на диска.
         file_path = (original.payload or {}).get("file_path")
         scene_id  = (original.payload or {}).get("scene_id")
         if not file_path or not Path(file_path).exists():
@@ -396,7 +469,8 @@ async def retry_etl_job(
                 status_code=422,
                 detail="Original upload file no longer exists — please re-upload the file."
             )
-        # Reset this job to pending and re-queue
+            
+        # Нулираме статуса към "pending" и рестартираме фоновата ML задача.
         crud_etl_job.etl_job.update(
             db, db_obj=original,
             obj_in={"status": "pending", "finished_at": None,
@@ -407,7 +481,7 @@ async def retry_etl_job(
         return original
 
     else:
-        # For sentinel_auto_pipeline: create a fresh job and forward to ETL service
+        # За автоматизирани сателитни pipeline-и просто създаваме ново копие на задачата.
         job_in = schemas.ETLJobCreate(
             job_type="sentinel_auto_pipeline",
             status="pending",

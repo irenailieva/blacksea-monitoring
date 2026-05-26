@@ -9,28 +9,34 @@ if TYPE_CHECKING:
     from .region import Region
 
 class IndexValue(Base):
-    """Model representing calculated index values for specific scenes."""
-    __tablename__ = "index_values"  # Changed to plural for consistency
+    """
+    ORM модел, съхраняващ изчислените стойности на конкретен индекс (напр. NDVI) 
+    за дадена сцена и евентуално за конкретен регион.
+    """
+    __tablename__ = "index_values"  # Множествено число за консистентност
 
-    # Foreign keys
+    # Външни ключове (Foreign keys)
+    # ondelete="CASCADE" означава, че ако сцената бъде изтрита, стойността също се изтрива.
     scene_id: Mapped[int] = mapped_column(ForeignKey("scenes.id", ondelete="CASCADE"), nullable=False)
     index_type_id: Mapped[int] = mapped_column(
         ForeignKey("index_types.id", ondelete="CASCADE"), 
         nullable=False
     )
+    # Опционално обвързване към регион. Ако регионът се изтрие, това поле става NULL.
     region_id: Mapped[int | None] = mapped_column(ForeignKey("regions.id", ondelete="SET NULL"), nullable=True)
 
-    # Value columns
-    mean_value: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    min_value: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    max_value: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    # Полета за самите стойности (Value columns)
+    mean_value: Mapped[Optional[float]] = mapped_column(Float, nullable=True) # Средна стойност на индекса
+    min_value: Mapped[Optional[float]] = mapped_column(Float, nullable=True) # Минимална стойност
+    max_value: Mapped[Optional[float]] = mapped_column(Float, nullable=True) # Максимална стойност
 
-    # Relationships
+    # Връзки (Relationships) към родителските обекти
     scene: Mapped["Scene"] = relationship(back_populates="index_values")
     index_type: Mapped["IndexType"] = relationship(back_populates="values")
     region: Mapped[Optional["Region"]] = relationship(back_populates="index_values")
 
     def __repr__(self) -> str:
+        """Стрингова репрезентация, показваща името на индекса и средната стойност."""
         return (
             f"<IndexValue(index={self.index_type.name if self.index_type else None}, "
             f"mean={self.mean_value:.3f if self.mean_value is not None else 'N/A'})>"

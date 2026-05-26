@@ -4,12 +4,15 @@ import { Check, ChevronDown, ChevronUp } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
+// Компоненти за падащо меню (Select)
+// Базирани на Radix UI Select примитиви за осигуряване на достъпност и персонализиран дизайн,
+// който изглежда еднакво във всички браузъри.
 const Select = SelectPrimitive.Root
-
 const SelectGroup = SelectPrimitive.Group
-
 const SelectValue = SelectPrimitive.Value
 
+// Компонент SelectTrigger
+// Това е видимият бутон, върху който потребителят кликва, за да отвори менюто.
 const SelectTrigger = React.forwardRef<
     React.ElementRef<typeof SelectPrimitive.Trigger>,
     React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger>
@@ -23,6 +26,7 @@ const SelectTrigger = React.forwardRef<
         {...props}
     >
         {children}
+        {/* Иконка, показваща, че това е падащо меню */}
         <SelectPrimitive.Icon asChild>
             <ChevronDown className="h-4 w-4 opacity-50" />
         </SelectPrimitive.Icon>
@@ -65,10 +69,13 @@ const SelectScrollDownButton = React.forwardRef<
 SelectScrollDownButton.displayName =
     SelectPrimitive.ScrollDownButton.displayName
 
+// Компонент SelectContent
+// Контейнерът, който съдържа самите опции за избор.
 const SelectContent = React.forwardRef<
     React.ElementRef<typeof SelectPrimitive.Content>,
     React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
 >(({ className, children, position = "popper", ...props }, ref) => {
+    // Рендиране чрез Portal към специфичен корен, за да се избегнат проблеми с z-index в сложни layout-и (напр. Leaflet карти)
     const portalRoot = document.getElementById("header-portal-root");
     return (
         <SelectPrimitive.Portal container={portalRoot}>
@@ -112,6 +119,8 @@ const SelectLabel = React.forwardRef<
 ))
 SelectLabel.displayName = SelectPrimitive.Label.displayName
 
+// Компонент SelectItem
+// Индивидуална опция за избор в падащото меню.
 const SelectItem = React.forwardRef<
     React.ElementRef<typeof SelectPrimitive.Item>,
     React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item>
@@ -124,6 +133,7 @@ const SelectItem = React.forwardRef<
         )}
         {...props}
     >
+        {/* Иконка, която се показва, когато опцията е избрана */}
         <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
             <SelectPrimitive.ItemIndicator>
                 <Check className="h-4 w-4" />

@@ -15,15 +15,22 @@ from .base import CRUDBase
 
 
 class CRUDUser(CRUDBase[User]):
-    """CRUD операции за User."""
+    """
+    CRUD операции, специфични за модела User (Потребител).
+    Наследява основните операции от CRUDBase и добавя специфични за автентикацията.
+    """
     
     def create(self, db: Session, *, obj_in: UserCreate) -> User:
-        """Създава нов потребител с хеширана парола."""
-        # Проверка за съществуващ потребител
+        """
+        Създава нов потребител. Първо проверява дали вече не съществува
+        потребител със същото име или имейл, след което хешира паролата.
+        """
+        # Логика за проверка на съществуващ потребител, за да се избегне дублиране.
         existing_user = db.query(User).filter(
             (User.username == obj_in.username) | (User.email == obj_in.email)
         ).first()
         if existing_user:
+            # Хвърляне на специфична грешка спрямо това кое поле е дублирано
             if existing_user.username == obj_in.username:
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
@@ -34,10 +41,11 @@ class CRUDUser(CRUDBase[User]):
                 detail="Email already registered"
             )
         
-        # Хеширане на паролата
+        # Хеширане на паролата преди запис в базата.
+        # Никога не съхраняваме пароли в явен вид (plain-text)!
         hashed_password = hash_password(obj_in.password)
         
-        # Създаване на потребител
+        # Създаване на ORM обекта
         db_user = User(
             username=obj_in.username,
             email=obj_in.email,
@@ -50,18 +58,22 @@ class CRUDUser(CRUDBase[User]):
         return db_user
     
     def get_by_username(self, db: Session, *, username: str) -> Optional[User]:
-        """Връща потребител по username."""
+        """Търси и връща потребител по неговото потребителско име."""
         return db.query(User).filter(User.username == username).first()
     
     def get_by_email(self, db: Session, *, email: str) -> Optional[User]:
-        """Връща потребител по email."""
+        """Търси и връща потребител по неговия имейл адрес."""
         return db.query(User).filter(User.email == email).first()
     
     def authenticate(self, db: Session, *, username: str, password: str) -> Optional[User]:
-        """Проверява credentials и връща потребителя при успех."""
+        """
+        Проверява идентификационните данни (credentials). 
+        Ако потребителят съществува и паролата е вярна, връща обекта, иначе None.
+        """
         user = self.get_by_username(db, username=username)
         if not user:
             return None
+        # Проверка чрез функцията verify_password, която сравнява хешове
         if not verify_password(password, user.password_hash):
             return None
         return user

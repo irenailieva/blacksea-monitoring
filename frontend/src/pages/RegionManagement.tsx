@@ -34,82 +34,100 @@ import {
 import api from '@/api/axios';
 import { Region } from '@/api/types';
 
+// Страница за управление на географски региони (Region Management)
+// Позволява добавяне, преглед и изтриване на зони, които се наблюдават от системата.
 export default function RegionManagement() {
-    const [regions, setRegions] = useState<Region[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [isAddOpen, setIsAddOpen] = useState(false);
+    // Състояния за списъка с региони и потребителския интерфейс
+    const [regions, setRegions] = useState<Region[]>([]); // Данни за всички региони
+    const [loading, setLoading] = useState(true); // Флаг за първоначално зареждане
+    const [isAddOpen, setIsAddOpen] = useState(false); // Управлява видимостта на модалния прозорец за добавяне
     
+    // Състояния за формата за добавяне на нов регион
     const [newName, setNewName] = useState('');
     const [newDesc, setNewDesc] = useState('');
-    const [newGeoJSON, setNewGeoJSON] = useState('');
-    const [adding, setAdding] = useState(false);
-    const [errorMsg, setErrorMsg] = useState('');
+    const [newGeoJSON, setNewGeoJSON] = useState(''); // Стринг, съдържащ GeoJSON геометрията
+    const [adding, setAdding] = useState(false); // Индикатор за протичаща заявка за добавяне
+    const [errorMsg, setErrorMsg] = useState(''); // Съобщение за грешка при валидация или мрежови проблем
 
+    // Функция за извличане на регионите от сървъра
     const fetchRegions = async () => {
         setLoading(true);
         try {
             const response = await api.get<Region[]>('/regions');
-            // Filter out AOI_ if we want, or keep them to show what's temp
-            // Let's show all, but we can badge the temp ones
+            // В отговора са включени както постоянните, така и временните (AOI_) региони.
+            // Тук ги запазваме всички, за да бъдат показани в таблицата (с различни етикети).
             setRegions(response.data);
         } catch (error) {
-            console.error('Failed to fetch regions:', error);
+            console.error('Неуспешно извличане на регионите:', error);
         } finally {
             setLoading(false);
         }
     };
 
+    // Зареждане на данните при монтиране на компонента
     useEffect(() => {
         fetchRegions();
     }, []);
 
+    // Обработчик за добавяне на нов регион
     const handleAddRegion = async () => {
         setAdding(true);
         setErrorMsg('');
+        
         try {
             let geometry;
+            // Валидация на въведения GeoJSON
             try {
                 geometry = JSON.parse(newGeoJSON);
             } catch (e) {
-                throw new Error("Invalid JSON in Geometry");
+                throw new Error("Невалиден JSON формат в полето за геометрия");
             }
             
+            // Проверка дали типът на геометрията е съвместим
             if (geometry.type !== "Polygon" && geometry.type !== "MultiPolygon") {
-                throw new Error("Geometry must be a GeoJSON Polygon or MultiPolygon");
+                throw new Error("Геометрията трябва да бъде GeoJSON Polygon или MultiPolygon");
             }
 
+            // Подготовка на данните за изпращане
             const payload = {
                 name: newName,
                 description: newDesc,
-                area_km2: 100, // Dummy area, a real system would calculate it
+                area_km2: 100, // Фиктивна стойност за площта (в реална система се изчислява автоматично на бекенда чрез PostGIS)
                 geometry: geometry
             };
 
+            // POST заявка към API-то
             await api.post('/regions', payload);
+            
+            // При успех: затваряне на модала, опресняване на списъка и изчистване на формата
             setIsAddOpen(false);
             fetchRegions();
             setNewName('');
             setNewDesc('');
             setNewGeoJSON('');
         } catch (error: any) {
-            console.error('Failed to add region:', error);
-            setErrorMsg(error.message || error.response?.data?.detail || "Failed to add region");
+            console.error('Неуспешно добавяне на регион:', error);
+            // Извеждане на конкретното съобщение за грешка
+            setErrorMsg(error.message || error.response?.data?.detail || "Възникна грешка при добавянето на региона");
         } finally {
             setAdding(false);
         }
     };
 
+    // Обработчик за изтриване на регион
     const handleDelete = async (id: number) => {
-        if (!confirm("Are you sure you want to delete this region?")) return;
+        // Потвърждение от потребителя преди необратимо действие
+        if (!confirm("Сигурни ли сте, че искате да изтриете този регион?")) return;
         try {
             await api.delete(`/regions/${id}`);
-            fetchRegions();
+            fetchRegions(); // Опресняване на таблицата след успешно изтриване
         } catch (error) {
-            console.error('Failed to delete region:', error);
-            alert("Failed to delete region");
+            console.error('Неуспешно изтриване на регион:', error);
+            alert("Неуспешно изтриване на регион");
         }
     };
 
+    // Показване на индикатор по време на първоначалното зареждане
     if (loading && regions.length === 0) {
         return (
             <div className="flex h-full items-center justify-center">
@@ -121,49 +139,51 @@ export default function RegionManagement() {
     return (
         <div className="h-full overflow-y-auto pr-2">
             <div className="container mx-auto py-6 space-y-6">
+                {/* Горен панел със заглавие и бутон за добавяне */}
                 <div className="flex items-center justify-between p-1">
                     <div>
-                        <h2 className="text-3xl font-bold tracking-tight">Region Management</h2>
+                        <h2 className="text-3xl font-bold tracking-tight">Управление на Региони</h2>
                         <p className="text-muted-foreground text-sm mt-1">
-                            Manage permanent geographical regions for Sentinel-2 monitoring.
+                            Управление на постоянните географски зони за мониторинг със Sentinel-2.
                         </p>
                     </div>
                     
+                    {/* Модален прозорец (Dialog) за добавяне на нов регион */}
                     <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
                         <DialogTrigger asChild>
                             <Button>
                                 <Plus className="mr-2 h-4 w-4" />
-                                Add Region
+                                Добави Регион
                             </Button>
                         </DialogTrigger>
                         <DialogContent className="sm:max-w-[500px]">
                             <DialogHeader>
-                                <DialogTitle>Add New Region</DialogTitle>
+                                <DialogTitle>Добавяне на нов регион</DialogTitle>
                                 <DialogDescription>
-                                    Define a new permanent area of interest. It will immediately be added to the Analysis dashboards.
+                                    Дефинирайте нова постоянна зона на интерес. Тя ще бъде автоматично добавена в таблото за анализи.
                                 </DialogDescription>
                             </DialogHeader>
                             <div className="grid gap-4 py-4">
                                 <div className="grid gap-2">
-                                    <Label htmlFor="name">Region Name</Label>
+                                    <Label htmlFor="name">Име на региона</Label>
                                     <Input 
                                         id="name" 
-                                        placeholder="e.g. Sunny Beach Coastline" 
+                                        placeholder="напр. Крайбрежие Слънчев бряг" 
                                         value={newName} 
                                         onChange={e => setNewName(e.target.value)}
                                     />
                                 </div>
                                 <div className="grid gap-2">
-                                    <Label htmlFor="desc">Description</Label>
+                                    <Label htmlFor="desc">Описание</Label>
                                     <Input 
                                         id="desc" 
-                                        placeholder="Optional description" 
+                                        placeholder="Опционално описание" 
                                         value={newDesc} 
                                         onChange={e => setNewDesc(e.target.value)}
                                     />
                                 </div>
                                 <div className="grid gap-2">
-                                    <Label htmlFor="geojson">GeoJSON Geometry (Polygon)</Label>
+                                    <Label htmlFor="geojson">GeoJSON Геометрия (Polygon)</Label>
                                     <Textarea 
                                         id="geojson" 
                                         placeholder='{"type": "Polygon", "coordinates": [[[...]]]}' 
@@ -172,6 +192,7 @@ export default function RegionManagement() {
                                         onChange={e => setNewGeoJSON(e.target.value)}
                                     />
                                 </div>
+                                {/* Визуализация на грешка, ако има такава */}
                                 {errorMsg && (
                                     <div className="text-sm text-destructive font-medium bg-destructive/10 p-2 rounded-md">
                                         {errorMsg}
@@ -179,31 +200,32 @@ export default function RegionManagement() {
                                 )}
                             </div>
                             <DialogFooter>
-                                <Button variant="outline" onClick={() => setIsAddOpen(false)} disabled={adding}>Cancel</Button>
+                                <Button variant="outline" onClick={() => setIsAddOpen(false)} disabled={adding}>Отказ</Button>
                                 <Button onClick={handleAddRegion} disabled={adding || !newName || !newGeoJSON}>
                                     {adding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                                    Save Region
+                                    Запази Регион
                                 </Button>
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
                 </div>
 
+                {/* Таблица със съществуващите региони */}
                 <Card>
                     <CardHeader>
-                        <CardTitle>Configured Regions</CardTitle>
+                        <CardTitle>Конфигурирани региони</CardTitle>
                         <CardDescription>
-                            These regions are actively mapped and tracked by the ETL pipeline.
+                            Тези региони се картографират и проследяват активно от ETL пайплайна.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Region</TableHead>
-                                    <TableHead>Type</TableHead>
-                                    <TableHead>Date Added</TableHead>
-                                    <TableHead className="text-right">Actions</TableHead>
+                                    <TableHead>Регион</TableHead>
+                                    <TableHead>Тип</TableHead>
+                                    <TableHead>Детайли</TableHead>
+                                    <TableHead className="text-right">Действия</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -218,17 +240,18 @@ export default function RegionManagement() {
                                             </div>
                                         </TableCell>
                                         <TableCell>
+                                            {/* Диференциране между временни (създадени от потребителски чертеж) и постоянни региони */}
                                             {region.name.startsWith("AOI_") || region.name.startsWith("aoi_") ? (
-                                                <Badge variant="secondary">Temporary AOI</Badge>
+                                                <Badge variant="secondary">Временен AOI</Badge>
                                             ) : (
-                                                <Badge variant="default" className="bg-green-600">Permanent</Badge>
+                                                <Badge variant="default" className="bg-green-600">Постоянен</Badge>
                                             )}
                                         </TableCell>
                                         <TableCell className="text-muted-foreground text-sm">
-                                            {/* In a real app we'd have created_at, but Region might not return it in the schema, just mocking it or showing id */}
                                             ID: {region.id}
                                         </TableCell>
                                         <TableCell className="text-right">
+                                            {/* Падащо меню с действия за конкретния регион */}
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
                                                     <Button variant="ghost" className="h-8 w-8 p-0">
@@ -236,23 +259,24 @@ export default function RegionManagement() {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
-                                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                    <DropdownMenuItem>View on Map</DropdownMenuItem>
-                                                    <DropdownMenuItem>Edit Geometry</DropdownMenuItem>
+                                                    <DropdownMenuLabel>Действия</DropdownMenuLabel>
+                                                    <DropdownMenuItem>Преглед на картата</DropdownMenuItem>
+                                                    <DropdownMenuItem>Редактиране на геометрията</DropdownMenuItem>
                                                     <DropdownMenuSeparator />
                                                     <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(region.id)}>
                                                         <Trash2 className="mr-2 h-4 w-4" />
-                                                        Delete Region
+                                                        Изтрий
                                                     </DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </TableCell>
                                     </TableRow>
                                 ))}
+                                {/* Празно състояние, ако няма региони */}
                                 {regions.length === 0 && (
                                     <TableRow>
                                         <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
-                                            No regions found. Add one to get started.
+                                            Няма намерени региони. Добавете един, за да започнете.
                                         </TableCell>
                                     </TableRow>
                                 )}

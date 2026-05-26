@@ -7,15 +7,22 @@ import time
 from utils import prepare_features
 from PIL import Image
 
+# ==============================================================================
+# ОБРАБОТКА НА ИЗОБРАЖЕНИЯ (IMAGE PROCESSOR)
+# Този модул съдържа функции за прилагане на обучените ML модели върху
+# сателитни снимки или качени от потребителя GeoTIFF файлове. 
+# Основната цел е да се генерира карта на качеството на водата и да се 
+# създадат визуализации (PNG) за frontend-а.
+# ==============================================================================
 
 def process_scene(band_paths: dict, output_path: str, model):
     """
-    Generates a water quality map from Sentinel-2 bands.
+    Генерира карта на качеството на водата от канали на Sentinel-2 (Bands).
     
-    Args:
-        band_paths: Dict with keys 'b2', 'b3', 'b4', 'b8', 'scl'.
-        output_path: Path to save the resulting TIF.
-        model: Loaded WaterQualityModel instance.
+    Аргументи:
+        band_paths (dict): Речник с пътищата до файловете (b2, b3, b4, b8, scl).
+        output_path (str): Път, където да бъде запазен резултантният TIF файл.
+        model (WaterQualityModel): Инстанция на заредения ML модел за предсказване.
     """
     
     b2_path = band_paths.get('b2')
@@ -24,24 +31,31 @@ def process_scene(band_paths: dict, output_path: str, model):
     b8_path = band_paths.get('b8')
     scl_path = band_paths.get('scl')
 
+    # Проверка дали всички необходими файлове са подадени
     if not all([b2_path, b3_path, b4_path, b8_path, scl_path]):
-        raise ValueError("Missing one or more required band paths.")
+        raise ValueError("Липсва един или повече задължителни пътища до каналите.")
 
-    # 🚀 SINGLE FILE MANUAL UPLOAD HANDLING
-    # If the user uploaded a single RGB/Multispectral GeoTIFF, the backend passes the same file for all bands.
+    # 🚀 ОБРАБОТКА ПРИ РЪЧНО КАЧЕН ФАЙЛ (SINGLE FILE MANUAL UPLOAD)
+    # Ако потребителят е качил единичен RGB/Мултиспектрален GeoTIFF (например от дрон),
+    # бекендът подава един и същ файл за всички канали.
     is_single_file = (b2_path == b3_path == b4_path == b8_path == scl_path) and b2_path is not None
     
     if is_single_file:
-        print(f"🔄 Processing single multi-band manual upload...")
+        print(f"🔄 Обработка на единичен ръчно качен файл...")
         with rasterio.open(b2_path) as src:
+            # Копираме профила на изходното изображение и го настройваме за резултата
             profile = src.profile.copy()
             profile.update(driver='GTiff', dtype=rasterio.uint8, count=1, nodata=255)
             
+            # Проверяваме дали изображението съдържа инфрачервен канал (NIR - обикновено 4-ти канал)
             has_nir = src.count >= 4
             
+            # Отваряме изходния TIF файл за запис
             with rasterio.open(output_path, 'w', **profile) as dst:
+                # Четем изображението блок по блок, за да не препълним RAM паметта (block_windows)
                 for ji, window in src.block_windows(1):
-                    # Band 1 -> Red (b4), Band 2 -> Green (b3), Band 3 -> Blue (b2)
+                    # Картографиране на каналите:
+                    # В стандартен RGB образ: Канал 1 -> Червено (b4), Канал 2 -> Зелено (b3), Канал 3 -> Синьо (b2)
                     b4 = src.read(1, window=window).astype('float32')
                     b3 = src.read(2, window=window).astype('float32') if src.count >= 2 else b4
                     b2 = src.read(3, window=window).astype('float32') if src.count >= 3 else b3
@@ -49,12 +63,14 @@ def process_scene(band_paths: dict, output_path: str, model):
                     if has_nir:
                         b8 = src.read(4, window=window).astype('float32')
                     else:
-                        # Synthetic NIR fallback to Green ensures NDVI naturally isolates vegetation
-                        # while avoiding false positives over bare soil.
+                        # Ако липсва NIR (снимката е само RGB), използваме зеления канал като заместител (synthetic NIR).
+                        # Това помага на изчислението на NDVI естествено да изолира растителността.
                         b8 = b3
 
-                    
-                    target_mask = np.ones(b2.shape, dtype=bool) # No cloud mask available in RGB orthomosaics
+                    # Тъй като това е обикновена снимка (нямаме сателитна SCL маска),
+                    # приемаме всички пиксели за валидни (target_mask).
+                    target_mask = np.ones(b2.shape, dtype=bool) 
+                    # Създаваме празен блок за резултата, запълнен със стойност 255 (NoData)
                     result_block = np.full(b2.shape, 255, dtype=np.uint8)
                     
                     b2_water = b2[target_mask]
@@ -62,49 +78,58 @@ def process_scene(band_paths: dict, output_path: str, model):
                     b4_water = b4[target_mask]
                     b8_water = b8[target_mask]
                     
+                    # Подготовка на характеристиките за модела (изчислява индекси вътре)
                     X_water = prepare_features(b2_water, b3_water, b4_water, b8_water)
                     
                     if len(X_water) > 0:
+                        # Предсказване на класовете за пикселите
                         mapped_pred = model.predict_batch(X_water)
+                        # Записваме резултата в съответните валидни пиксели на блока
                         result_block[target_mask] = mapped_pred
                         
+                    # Записваме обработения блок във файла
                     dst.write(result_block, 1, window=window)
                     print(".", end="", flush=True)
 
-        print(f"\n🎉 Single-file Map generated at {output_path}")
-        # 🔥 BAKE HIGH-PERFORMANCE PNG
+        print(f"\n🎉 Единичният файл е генериран успешно: {output_path}")
+        # 🔥 ГЕНЕРИРАНЕ НА PNG ИЗОБРАЖЕНИЕ С ВИСОКА ПРОИЗВОДИТЕЛНОСТ ЗА FRONTEND-А
         png_path = output_path.replace(".tif", ".png")
         stats = bake_png(output_path, png_path)
         return stats
 
-    print(f"🔄 Processing multi-file Sentinel-2 scene...")
+    print(f"🔄 Обработка на сателитна сцена от Sentinel-2 (многофайлова)...")
 
-    # 1. Read SCL and Cloud Masking
+    # 1. Четене на SCL (Scene Classification Layer) и маскиране на облаци
+    # Отваряме първия канал (B2), за да вземем точните размери (10m/px)
     with rasterio.open(b2_path) as src_ref:
         target_height = src_ref.height
         target_width = src_ref.width
         ref_profile = src_ref.profile.copy()
 
     with rasterio.open(scl_path) as src_scl:
-        # Upscale SCL to 10m (match B2)
+        # SCL е 20m/px, затова го преоразмеряваме до 10m/px (target_height/width),
+        # за да съвпада със спектралните канали.
         scl_full = src_scl.read(
             1,
             out_shape=(target_height, target_width), 
             resampling=Resampling.nearest 
         )
 
-    # Cloud Masking (Classes: 3, 8, 9, 10)
+    # Създаване на маска за облаци (класове в SCL: 3, 8, 9, 10 означават облаци или сенки)
     binary_cloud_mask = np.isin(scl_full, [3, 8, 9, 10]).astype(np.uint8)
+    # Разширяване (Dilate) на маската за облаците - често краищата на облаците са тънки
+    # и SCL ги пропуска, затова "раздуваме" маската с 15x15 пиксела.
     kernel = np.ones((15, 15), np.uint8) 
     dilated_cloud_mask = cv2.dilate(binary_cloud_mask, kernel, iterations=1)
 
-    # Land Masking
+    # Създаване на маска за суша (класове: 4 - растителност, 5 - голи почви, 11 - сняг)
     land_mask = np.isin(scl_full, [4, 5, 11]).astype(bool)
+    # Крайна маска на невалидните пиксели: облаци + суша
     final_invalid_mask = dilated_cloud_mask.astype(bool) | land_mask
 
-    print("✅ Cloud and land masks generated.")
+    print("✅ Генерирани са маските за облаци и суша.")
 
-    # 2. Prepare Output Profile
+    # 2. Подготовка на профила за изходния файл
     profile = ref_profile.copy()
     profile.update(
         driver='GTiff',
@@ -113,8 +138,8 @@ def process_scene(band_paths: dict, output_path: str, model):
         nodata=255
     )
 
-    # 3. Process Blocks
-    print(f"🌍 Generating map...")
+    # 3. Обработка на изображението на блокове (Block-by-Block Processing)
+    print(f"🌍 Генериране на картата...")
     
     with rasterio.open(b2_path) as src_b2, \
          rasterio.open(b3_path) as src_b3, \
@@ -122,9 +147,10 @@ def process_scene(band_paths: dict, output_path: str, model):
          rasterio.open(b8_path) as src_b8, \
          rasterio.open(output_path, 'w', **profile) as dst:
         
+        # Обхождаме файловете на малки прозорци (blocks), което пести RAM
         for ji, window in src_b2.block_windows(1):
             
-            # Read Mask chunk
+            # Четене на съответната част от общата невалидна маска
             row_start = window.row_off
             row_end = window.row_off + window.height
             col_start = window.col_off
@@ -132,15 +158,17 @@ def process_scene(band_paths: dict, output_path: str, model):
             
             invalid_chunk = final_invalid_mask[row_start:row_end, col_start:col_end]
             
-            # Target Mask: Valid pixels only
+            # Target Mask съдържа само валидните пиксели (инвертираме невалидната маска)
             target_mask = ~invalid_chunk
             
+            # Ако в този блок няма нито един валиден пиксел (напр. изцяло суша), 
+            # просто записваме празен блок (NoData = 255) и продължаваме към следващия.
             if not target_mask.any():
                 empty_block = np.full((window.height, window.width), 255, dtype=rasterio.uint8)
                 dst.write(empty_block, 1, window=window)
                 continue
 
-            # Read Bands
+            # Четене на спектралните канали за текущия блок
             b2 = src_b2.read(1, window=window).astype('float32')
             b3 = src_b3.read(1, window=window).astype('float32')
             b4 = src_b4.read(1, window=window).astype('float32')
@@ -148,66 +176,71 @@ def process_scene(band_paths: dict, output_path: str, model):
             
             result_block = np.full(b2.shape, 255, dtype=np.uint8)
             
-            # Extract water pixels
+            # Извличане само на водните (валидни) пиксели
             b2_water = b2[target_mask]
             b3_water = b3[target_mask]
             b4_water = b4[target_mask]
             b8_water = b8[target_mask]
             
-            # Prepare features with spectral indices: [B2, B3, B4, B8, NDVI, NDWI]
+            # Подготовка на характеристиките [B2, B3, B4, B8, NDVI, NDWI]
             X_water = prepare_features(b2_water, b3_water, b4_water, b8_water)
             
             if len(X_water) > 0:
-                # Predict using the model
-                # Model returns 10, 20, 30 directly
+                # Предсказване на класа. Моделът връща директно класовете: 10, 20 или 30
                 mapped_pred = model.predict_batch(X_water)
                 result_block[target_mask] = mapped_pred
             
             dst.write(result_block, 1, window=window)
             print(".", end="", flush=True)
 
-    print(f"\n🎉 Map generated at {output_path}")
+    print(f"\n🎉 Картата е генерирана в {output_path}")
     
-    # 🔥 BAKE HIGH-PERFORMANCE PNG
+    # 🔥 ГЕНЕРИРАНЕ НА PNG ИЗОБРАЖЕНИЕ
     png_path = output_path.replace(".tif", ".png")
     stats = bake_png(output_path, png_path)
     return stats
 
 def bake_png(tif_path: str, png_path: str):
     """
-    Converts a 1-channel classification TIFF into a 4-channel transparent RGBA PNG 
-    using ROBUST range-mapping for floating-point and categorical artifacts.
+    Конвертира 1-канален TIF с класификация в 4-канален прозрачен RGBA PNG файл.
+    Този файл се използва директно от frontend-а (Leaflet картата) за супер бърза визуализация.
     """
-    print(f"📦 Baking high-performance PNG: {png_path}...")
+    print(f"📦 Създаване на PNG за уеб визуализация: {png_path}...")
     with rasterio.open(tif_path) as src:
         data = src.read(1).astype(np.float32)
         
-        # Initialize RGBA (H, W, 4)
+        # Инициализация на RGBA масив (Височина, Ширина, 4)
         h, w = data.shape
         rgba = np.zeros((h, w, 4), dtype=np.uint8)
         
-        # Robust Range Mapping (Matches the most defensive frontend logic)
-        # 1. Algae (Emerald Green #22c55e) - Priority 1
+        # Здравословно картографиране на класовете към цветове (Robust Range Mapping).
+        # Използват се интервали, за да се избегнат проблеми с floating-point грешки.
+        
+        # 1. Водорасли/Растителност (Изумрудено зелено #22c55e)
+        # Класът от модела е 20.
         algae_mask = ((data >= 1.5) & (data < 2.5)) | ((data >= 15) & (data < 25.5))
         rgba[algae_mask] = [34, 197, 94, 255]
         
-        # 2. Sand/Land (Golden Yellow #facc15)
+        # 2. Пясък/Абиотични (Златисто жълто #facc15)
+        # Класът от модела е 10.
         sand_mask = ((data >= 0.5) & (data < 1.5)) | ((data >= 5) & (data < 15))
         rgba[sand_mask] = [250, 204, 21, 255]
         
-        # 3. Water (Hydro Blue #0ea5e9)
+        # 3. Дълбока вода (Синьо #0ea5e9)
+        # Класът от модела е 30.
         water_mask = ((data >= 2.5) & (data < 5.0)) | ((data >= 25.5) & (data < 45))
         rgba[water_mask] = [14, 165, 233, 255]
 
+        # Конвертиране на масива в PNG и запазване
         img = Image.fromarray(rgba, 'RGBA')
         img.save(png_path, 'PNG')
-        print(f"✅ PNG Baked successfully with {np.count_nonzero(algae_mask)} algae pixels.")
+        print(f"✅ PNG е генериран успешно с {np.count_nonzero(algae_mask)} пиксела водорасли.")
 
-        # Sentinel-2 spatial resolution is 10m/px, so 1 px = 100 m²
-        # 10 is sand, 20 is algae, 30 is deep sea
+        # Изчисляване на статистики за frontend-а.
+        # Тъй като разделителната способност на Sentinel-2 е 10m/px, един пиксел се равнява на 10x10 = 100 m²
         return {
             "vegetation_area_m2": int(np.count_nonzero(algae_mask)) * 100,
             "sand_area_m2": int(np.count_nonzero(sand_mask)) * 100,
             "water_area_m2": int(np.count_nonzero(water_mask)) * 100,
-            "avg_confidence": 95.0 # Mocking confidence for now as random forest predict_proba isn't piped through easily
+            "avg_confidence": 95.0 # Mocking confidence, тъй като predict_proba изисква допълнителна обработка
         }

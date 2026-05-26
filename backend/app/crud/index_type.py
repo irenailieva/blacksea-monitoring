@@ -11,10 +11,15 @@ from .base import CRUDBase
 
 
 class CRUDIndexType(CRUDBase[IndexType]):
-    """CRUD операции за IndexType."""
+    """
+    CRUD операции за IndexType (Видове индекси като NDVI).
+    """
     
     def create(self, db: Session, *, obj_in: IndexTypeCreate) -> IndexType:
-        """Създава нов тип индекс."""
+        """
+        Създава нов тип индекс, като първо проверява дали вече не съществува такъв с това име.
+        Имената на индексите (напр. 'NDVI') трябва да са уникални в системата.
+        """
         # Проверка за съществуващ тип индекс с това име
         existing = db.query(IndexType).filter(IndexType.name == obj_in.name).first()
         if existing:
@@ -23,7 +28,7 @@ class CRUDIndexType(CRUDBase[IndexType]):
                 detail="IndexType with this name already exists"
             )
         
-        # Създаване на тип индекс
+        # Създаване и запис на новия тип индекс
         db_index_type = IndexType(
             name=obj_in.name,
             description=obj_in.description,

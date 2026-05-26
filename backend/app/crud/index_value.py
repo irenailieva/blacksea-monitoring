@@ -14,11 +14,17 @@ from .base import CRUDBase
 
 
 class CRUDIndexValue(CRUDBase[IndexValue]):
-    """CRUD операции за IndexValue."""
+    """
+    CRUD операции за изчислените стойности на индекси (IndexValue).
+    """
     
     def create(self, db: Session, *, obj_in: IndexValueCreate) -> IndexValue:
-        """Създава нова индексна стойност."""
-        # Проверка за съществуваща стойност за същата сцена и тип индекс
+        """
+        Записва нова изчислена стойност на индекс.
+        Гарантира, че за дадена сцена и тип индекс има само един запис (уникалност).
+        Проверява валидността на външните ключове (сцена, тип индекс, регион).
+        """
+        # Проверка за съществуваща стойност (предотвратяване на дублиране)
         existing = db.query(IndexValue).filter(
             (IndexValue.scene_id == obj_in.scene_id) &
             (IndexValue.index_type_id == obj_in.index_type_id)
@@ -29,7 +35,7 @@ class CRUDIndexValue(CRUDBase[IndexValue]):
                 detail="IndexValue for this scene and index_type already exists"
             )
         
-        # Проверка за съществуващи обекти
+        # Валидация, че сцената съществува
         scene = db.query(Scene).filter(Scene.id == obj_in.scene_id).first()
         if not scene:
             raise HTTPException(
@@ -37,6 +43,7 @@ class CRUDIndexValue(CRUDBase[IndexValue]):
                 detail="Scene not found"
             )
         
+        # Валидация, че типът индекс съществува
         index_type = db.query(IndexType).filter(IndexType.id == obj_in.index_type_id).first()
         if not index_type:
             raise HTTPException(
@@ -44,6 +51,7 @@ class CRUDIndexValue(CRUDBase[IndexValue]):
                 detail="IndexType not found"
             )
         
+        # Валидация на региона, ако такъв е подаден
         if obj_in.region_id:
             region = db.query(Region).filter(Region.id == obj_in.region_id).first()
             if not region:
@@ -52,7 +60,7 @@ class CRUDIndexValue(CRUDBase[IndexValue]):
                     detail="Region not found"
                 )
         
-        # Създаване на индексна стойност
+        # Създаване и запазване
         db_index_value = IndexValue(
             scene_id=obj_in.scene_id,
             index_type_id=obj_in.index_type_id,

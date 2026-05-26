@@ -11,6 +11,8 @@ from app.models.user import User
 from app import schemas
 from app.crud import index_value as crud_index_value
 
+# Инициализиране на рутер за управление на конкретните стойности на спектралните индекси
+# (които се изчисляват за определена сцена и регион).
 router = APIRouter(prefix="/index-values", tags=["index-values"])
 
 
@@ -20,7 +22,11 @@ def create_index_value(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_any_role("researcher", "admin"))
 ):
-    """Създава нова индексна стойност. Изисква researcher или admin роля."""
+    """
+    Записва нова изчислена индексна стойност в базата данни.
+    Изисква 'researcher' или 'admin' роля. Обикновено това действие се изпълнява
+    от ETL скриптовете, след като приключат обработката на нова сателитна сцена.
+    """
     return crud_index_value.create(db=db, obj_in=index_value_in)
 
 
@@ -34,7 +40,13 @@ def read_index_values(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Връща списък от индексни стойности с опционално филтриране."""
+    """
+    Връща списък от индексни стойности. Поддържа богато филтриране:
+    Може да се филтрира по сцена (scene_id), по вид индекс (index_type_id) 
+    и по регион (region_id). 
+    """
+    # Извикваме специализиран CRUD метод, който динамично изгражда SQLAlchemy заявката 
+    # спрямо това кои параметри (филтри) не са None.
     return crud_index_value.get_filtered(
         db=db, 
         scene_id=scene_id,
@@ -51,7 +63,10 @@ def read_index_value(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Връща индексна стойност по ID. Изисква автентикация."""
+    """
+    Връща конкретна индексна стойност чрез нейния първичен ключ (ID).
+    Изисква базова автентикация.
+    """
     db_index_value = crud_index_value.get(db=db, id=index_value_id)
     if not db_index_value:
         raise HTTPException(
@@ -68,13 +83,18 @@ def update_index_value(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_any_role("researcher", "admin"))
 ):
-    """Обновява индексна стойност. Изисква researcher или admin роля."""
+    """
+    Обновява съществуваща индексна стойност.
+    Може да бъде полезно, ако е имало грешка в изчисленията и данните трябва да бъдат коригирани.
+    """
+    # Намираме стария запис
     db_index_value = crud_index_value.get(db=db, id=index_value_id)
     if not db_index_value:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="IndexValue not found"
         )
+    # Актуализираме го с новите данни
     return crud_index_value.update(db=db, db_obj=db_index_value, obj_in=index_value_in)
 
 
@@ -84,7 +104,10 @@ def delete_index_value(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_any_role("admin"))
 ):
-    """Изтрива индексна стойност. Изисква admin роля."""
+    """
+    Премахва запис за индексна стойност. 
+    Изисква 'admin' права.
+    """
     db_index_value = crud_index_value.get(db=db, id=index_value_id)
     if not db_index_value:
         raise HTTPException(
@@ -93,4 +116,3 @@ def delete_index_value(
         )
     crud_index_value.delete(db=db, id=index_value_id)
     return None
-

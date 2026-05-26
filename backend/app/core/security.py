@@ -24,13 +24,16 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "120"
 def hash_password(password: str) -> str:
     """
     Хешира потребителска парола с bcrypt.
+    Генерира случаен "солт" (salt) и го комбинира с паролата преди хеширане,
+    което предпазва от речникови атаки и атаки с предварително изчислени таблици (rainbow tables).
     """
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
 
 def verify_password(password: str, hashed: str) -> bool:
     """
-    Проверява дали дадена парола съвпада с хешираната версия.
+    Проверява дали дадена парола (в явен текст) съвпада с хешираната версия,
+    съхранена в базата данни. Използва bcrypt.checkpw за сигурна проверка.
     """
     return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
 
@@ -45,45 +48,46 @@ def create_access_token(
     expires_minutes: Optional[int] = None
 ) -> str:
     """
-    Създава JWT access token.
+    Създава JWT (JSON Web Token) за удостоверяване на потребителя (access token).
     
     Args:
         data: Данни за включване в токена. Трябва да съдържа поне "sub" (subject/username).
               Може да включва и "role", "email" и др.
-        expires_minutes: Продължителност в минути. 
-                         Ако None, използва ACCESS_TOKEN_EXPIRE_MINUTES от environment.
+        expires_minutes: Продължителност в минути на валидността на токена. 
+                         Ако е None, се използва стойността по подразбиране (ACCESS_TOKEN_EXPIRE_MINUTES).
         
     Returns:
-        JWT token като string
+        Криптографски подписан JWT token като стринг (string).
         
     Raises:
-        ValueError: Ако data не съдържа "sub"
-        
-    Example:
-        >>> claims = {"sub": "john_doe", "role": "researcher"}
-        >>> token = create_access_token(claims)
-        >>> # С персонализирана продължителност
-        >>> token = create_access_token(claims, expires_minutes=60)
+        ValueError: Ако data не съдържа полето "sub" (subject).
     """
     if not data or "sub" not in data:
         raise ValueError("Token data must contain 'sub' field")
     
+    # Копираме данните, за да не променяме оригиналния речник
     to_encode = data.copy()
+    
+    # Изчисляваме времето на изтичане (expiration time) на токена в UTC
     expire = datetime.now(timezone.utc) + timedelta(
         minutes=expires_minutes or ACCESS_TOKEN_EXPIRE_MINUTES
     )
     
-    # Добавяне на стандартни JWT claims
+    # Добавяне на стандартни (reserved) JWT claims (полета)
     to_encode.update({
-        "exp": expire,
-        "iat": datetime.now(timezone.utc)  # Issued at timestamp
+        "exp": expire, # Време на изтичане на токена
+        "iat": datetime.now(timezone.utc)  # Време на издаване (Issued at timestamp)
     })
     
+    # Кодиране на токена с избрания таен ключ (secret) и алгоритъм
     return jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
 
 def decode_token(token: str) -> dict:
-    """Декодира и валидира JWT token."""
+    """
+    Декодира и валидира JWT токена.
+    Ако токенът е невалиден, манипулиран или с изтекъл срок, хвърля TokenError.
+    """
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         return payload
@@ -92,15 +96,21 @@ def decode_token(token: str) -> dict:
 
 
 def get_token_from_request(request: Request) -> str:
-    """Извлича JWT token от request headers или cookies."""
-    # 1) Authorization: Bearer <token>
+    """
+    Извлича JWT токена от HTTP заявката (request).
+    Първо проверява Authorization header-а, а ако липсва, проверява в cookies.
+    """
+    # 1) Проверка в хедъра (Authorization: Bearer <token>)
     auth = request.headers.get("Authorization")
     if auth and auth.lower().startswith("bearer "):
         return auth.split(" ", 1)[1].strip()
-    # 2) HttpOnly cookie 'access_token'
+        
+    # 2) Проверка в бисквитките (HttpOnly cookie 'access_token') - важно за сигурността в браузъра
     cookie_token = request.cookies.get("access_token")
     if cookie_token:
         return cookie_token
+        
+    # Ако токенът не е намерен нито в хедъра, нито в бисквитката, се връща 401 Unauthorized
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Missing token"
@@ -112,34 +122,16 @@ def get_current_user(
     db: Session = Depends(get_db)
 ) -> User:
     """
-    Извлича текущия потребител от JWT token и базата данни.
+    Извлича текущия автентикиран потребител.
     
-    Използва се като dependency във FastAPI routes за защита на endpoints.
-    Автоматично извлича токена от Authorization header или cookie, валидира го,
-    и зарежда потребителя от базата данни.
-    
-    Args:
-        request: FastAPI Request обект
-        db: SQLAlchemy database session
-        
-    Returns:
-        User обект от базата данни
-        
-    Raises:
-        HTTPException: 
-            - 401 UNAUTHORIZED: Ако токенът липсва, е невалиден или изтекъл
-            - 401 UNAUTHORIZED: Ако payload-ът не съдържа "sub" или е невалиден
-            - 401 UNAUTHORIZED: Ако потребителят не е намерен в базата данни
-            
-    Example:
-        >>> @router.get("/protected")
-        >>> def protected_route(user: User = Depends(get_current_user)):
-        >>>     return {"message": f"Hello {user.username}"}
+    Използва се като зависимост (dependency) във FastAPI routes за защита на endpoints.
+    Автоматично извлича токена, валидира го, и зарежда потребителя от базата данни.
+    Ако някоя от тези стъпки се провали, връща грешка (HTTPException).
     """
-    # Извличане на токена от request
+    # Стъпка 1: Извличане на токена от заявката (headers или cookies)
     token = get_token_from_request(request)
     
-    # Декодиране и валидация на токена
+    # Стъпка 2: Декодиране и криптографска валидация на токена
     try:
         payload = decode_token(token)
     except TokenError as e:
@@ -149,7 +141,7 @@ def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    # Извличане и валидация на username от payload
+    # Стъпка 3: Извличане на идентификатора на потребителя ('sub') от полезния товар (payload)
     username = payload.get("sub")
     if not username or not isinstance(username, str):
         raise HTTPException(
@@ -158,7 +150,7 @@ def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    # Зареждане на потребителя от базата данни
+    # Стъпка 4: Зареждане на потребителя от базата данни и проверка дали съществува
     user = db.query(User).filter(User.username == username).first()
     if not user:
         raise HTTPException(
@@ -167,24 +159,14 @@ def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    # TODO: Ако в бъдеще се добави is_active поле, добави проверка:
-    # if not user.is_active:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_403_FORBIDDEN,
-    #         detail="User account is inactive"
-    #     )
-    
     return user
 
 
 def require_role(required: str) -> Callable:
     """
-    Factory функция за създаване на dependency, която изисква определена роля.
-    
-    Пример:
-        @router.get("/admin-only")
-        def admin_endpoint(user: User = Depends(require_role("admin"))):
-            ...
+    Фабрична функция (factory function) за създаване на зависимост (dependency), 
+    която изисква потребителят да има точно определена роля.
+    Ако ролята не съвпада, връща 403 Forbidden.
     """
     def dep(user: User = Depends(get_current_user)) -> User:
         if user.role != required:
@@ -198,12 +180,9 @@ def require_role(required: str) -> Callable:
 
 def require_any_role(*roles: str) -> Callable:
     """
-    Factory функция за dependency, която изисква една от посочените роли.
-    
-    Пример:
-        @router.get("/researcher-or-admin")
-        def endpoint(user: User = Depends(require_any_role("researcher", "admin"))):
-            ...
+    Фабрична функция за създаване на зависимост, която изисква 
+    потребителят да има поне една от посочените роли.
+    Полезно за маршрути, достъпни например за 'researcher' и 'admin'.
     """
     def dep(user: User = Depends(get_current_user)) -> User:
         if user.role not in roles:
@@ -217,12 +196,8 @@ def require_any_role(*roles: str) -> Callable:
 
 def admin_required(user: User = Depends(get_current_user)) -> User:
     """
-    Dependency за изискване на admin роля.
-    
-    Пример:
-        @router.get("/admin-only")
-        def admin_endpoint(user: User = Depends(admin_required)):
-            ...
+    Специфична зависимост, която проверява дали текущият потребител е администратор.
+    Използва се директно в маршрути: @router.get(..., dependencies=[Depends(admin_required)])
     """
     if user.role != "admin":
         raise HTTPException(
@@ -234,12 +209,7 @@ def admin_required(user: User = Depends(get_current_user)) -> User:
 
 def researcher_required(user: User = Depends(get_current_user)) -> User:
     """
-    Dependency за изискване на researcher роля.
-    
-    Пример:
-        @router.get("/researcher-only")
-        def researcher_endpoint(user: User = Depends(researcher_required)):
-            ...
+    Специфична зависимост, която проверява дали текущият потребител е изследовател (researcher).
     """
     if user.role != "researcher":
         raise HTTPException(

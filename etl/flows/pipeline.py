@@ -21,11 +21,14 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"
 from sqlalchemy import create_engine, text
 from backend.app.models import Base
 
+# Функция за обновяване на статуса на дадена задача (Job) в базата данни
 def update_job_status(engine, job_id, status, progress=None):
     if not job_id:
         return
     try:
+        # Отваряне на транзакция към базата данни
         with engine.begin() as conn:
+            # Ако е подаден прогрес, обновяваме JSON полето payload
             if progress is not None:
                 progress_json = json.dumps(progress)
                 prog_str = (
@@ -34,7 +37,11 @@ def update_job_status(engine, job_id, status, progress=None):
                 )
             else:
                 prog_str = ""
+            
+            # Ако задачата е приключила (успешно или не), записваме часа на приключване
             finish_str = ", finished_at = NOW() " if status in ('completed', 'failed') else ""
+            
+            # Подготовка и изпълнение на SQL заявката за обновяване
             stmt = (
                 f"UPDATE etl_jobs SET status = :status, updated_at = NOW() "
                 f"{prog_str}{finish_str}WHERE id = :job_id"
@@ -44,26 +51,33 @@ def update_job_status(engine, job_id, status, progress=None):
     except Exception as e:
         logger.error(f"Failed to update job status for job {job_id}: {e}")
 
+# Функция за зареждане на конфигурацията от YAML файл
 def load_config():
+    # Намиране на главната директория на проекта
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     config_path = os.path.join(base_dir, "config.yml")
     
+    # Резервен вариант, ако файлът не е намерен на стандартното място
     if not os.path.exists(config_path):
         logger.warning(f"Config not found at {config_path}, trying fallback...")
         config_path = "config.yml"
         
     logger.info(f"Loading config from: {os.path.abspath(config_path)}")
+    
+    # Отваряне и прочитане на конфигурационния файл
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
         if not config:
             raise ValueError(f"Config file at {config_path} is empty or malformed.")
         return config
 
+# Основна функция, изпълняваща ETL пайплайна (Извличане, Трансформация, Зареждане)
 def run_pipeline(job_id=None, bbox=None, aoi_name=None, cloud_max=None, display_name=None):
     logger.info(f"Starting ETL pipeline (Job ID: {job_id})")
     
     config = load_config()
     
+    # Извличане на параметри от средата или конфигурацията
     mode = os.getenv("ETL_MODE", "real")
     output_dir = os.getenv("ETL_OUT_DIR", config['output']['dir'])
     db_url = os.getenv("DATABASE_URL")
@@ -72,21 +86,27 @@ def run_pipeline(job_id=None, bbox=None, aoi_name=None, cloud_max=None, display_
         logger.error("DATABASE_URL is not set!")
         return
         
+    # Презаписване на изходната директория за нуждите на машинното обучение
     output_dir = "ml/data/inference"
 
     logger.info("Ensuring database tables exist...")
+    # Създаване на връзка към базата данни
     engine = create_engine(db_url)
     
+    # Инициализация на таблиците за потребители и екипи, ако не съществуват
     from backend.app.models.user import user_role
     from backend.app.models.team import team_role
     user_role.create(bind=engine, checkfirst=True)
     team_role.create(bind=engine, checkfirst=True)
     
+    # Създаване на всички останали таблици, дефинирани в моделите (Base)
     Base.metadata.create_all(engine)
     
+    # Обновяване на прогреса на задачата на 5% (Стартирана)
     update_job_status(engine, job_id, 'processing', 5)
 
     try:
+        # Определяне на времевия обхват за търсене на сателитни снимки (по подразбиране последните 90 дни)
         import datetime as dt_module
         today = dt_module.date.today()
         since_default = (today - dt_module.timedelta(days=90)).isoformat()
@@ -98,14 +118,17 @@ def run_pipeline(job_id=None, bbox=None, aoi_name=None, cloud_max=None, display_
         }
 
         aoi_list = []
+        # Ако е подадена конкретна зона чрез API-то (bbox), използваме нея
         if bbox and len(bbox) == 4 and aoi_name:
             aoi_list.append({
                 "name": aoi_name,
                 "bbox": bbox
             })
         else:
+            # В противен случай извличаме всички активни региони от базата данни
             logger.info("Fetching all active regions from database for ETL processing...")
             with engine.connect() as conn:
+                # Взимаме имената и границите (bbox) на всички региони, които не са временни AOI-та
                 rows = conn.execute(text("""
                     SELECT name, 
                            ST_XMin(geometry::geometry) as minx, 
@@ -122,21 +145,26 @@ def run_pipeline(job_id=None, bbox=None, aoi_name=None, cloud_max=None, display_
                             "bbox": [row[1], row[2], row[3], row[4]]
                         })
             
+            # Ако базата е празна, използваме зоната по подразбиране от конфигурацията
             if not aoi_list:
                 logger.warning("No active regions found in database. Falling back to config.yml.")
                 aoi_list.append(dict(config['aoi']))
 
+        # Определяне на филтъра за максимално облачно покритие
         effective_cloud_max = cloud_max if cloud_max is not None else config['filters'].get('cloud_max', 20)
 
         total_aois = len(aoi_list)
         logger.info(f"Pipeline will process {total_aois} region(s).")
 
+        # Итерация през всеки регион, за който ще се извършва обработка
         for idx, effective_aoi in enumerate(aoi_list):
             logger.info(f"Processing AOI {idx+1}/{total_aois}: {effective_aoi['name']}  bbox={effective_aoi['bbox']}  cloud_max={effective_cloud_max}%")
             
+            # Изчисляване на прогреса за текущата стъпка
             base_progress = 5 + (idx / total_aois) * 90
             region_progress_step = 90 / total_aois
 
+            # 1. Изтегляне на данните от Sentinel-2 за дадения регион
             download_result = download_data(
                 aoi=effective_aoi,
                 time_range=time_range,
@@ -146,10 +174,12 @@ def run_pipeline(job_id=None, bbox=None, aoi_name=None, cloud_max=None, display_
                 progress_callback=lambda p: update_job_status(engine, job_id, 'processing', base_progress + (p / 100) * region_progress_step * 0.6)
             )
 
+            # Извличане на идентификаторите на изтеглените сцени
             stac_item_id = download_result.get("stac_item_id", "")
             all_stac_ids = download_result.get("all_stac_ids", [stac_item_id])
             expected_scene_id = f"sentinel2_{stac_item_id}" if stac_item_id else None
 
+            # Проверка дали тази сцена вече не е обработена (за да избегнем повторна работа)
             if expected_scene_id:
                 with engine.connect() as conn:
                     rows = conn.execute(
@@ -168,6 +198,7 @@ def run_pipeline(job_id=None, bbox=None, aoi_name=None, cloud_max=None, display_
                     logger.info(f"Scene '{expected_scene_id}' already in DB for region '{effective_aoi['name']}' — skipping.")
                     continue
 
+            # Извличане на пътищата до свалените файлове
             raw_file = download_result.get("composite")
             ml_bands = download_result.get("ml_bands")
             
@@ -177,12 +208,15 @@ def run_pipeline(job_id=None, bbox=None, aoi_name=None, cloud_max=None, display_
 
             update_job_status(engine, job_id, 'processing', base_progress + region_progress_step * 0.6)
             
+            # 2. Предварителна обработка (preprocessing) на изображението
             processed_file = preprocess_raster(raw_file)
             update_job_status(engine, job_id, 'processing', base_progress + region_progress_step * 0.63)
             
+            # 3. Генериране на допълнителни индекси (напр. NDVI)
             ndvi_file = generate_index(processed_file, index_name='NDVI')
             update_job_status(engine, job_id, 'processing', base_progress + region_progress_step * 0.66)
             
+            # Помощна функция за извличане на метаданни от името на файла
             def get_scene_metadata(f):
                 fname = os.path.basename(f)
                 sid = ""
@@ -201,22 +235,27 @@ def run_pipeline(job_id=None, bbox=None, aoi_name=None, cloud_max=None, display_
                     sid = fname.split(".")[0].replace("_processed", "").replace("_NDVI", "").replace("_classification", "")
                 return sid, dt
 
+            # Подготовка на метаданните за качване
             scene_id_override, real_acquisition_date = get_scene_metadata(raw_file)
             scene_id_override = f"{scene_id_override}_job{job_id}_{idx}"
             real_cloud_cover = download_result.get("cloud_cover", 0.0)
 
+            # 4. Качване на резултатите в базата данни (PostGIS)
             upload_to_db(raw_file, db_url, effective_aoi, scene_id=scene_id_override, acquisition_date=real_acquisition_date, cloud_cover=real_cloud_cover, display_name=display_name)
             upload_to_db(processed_file, db_url, effective_aoi, scene_id=scene_id_override, acquisition_date=real_acquisition_date, cloud_cover=real_cloud_cover, display_name=display_name)
             upload_to_db(ndvi_file, db_url, effective_aoi, scene_id=scene_id_override, acquisition_date=real_acquisition_date, cloud_cover=real_cloud_cover, display_name=display_name)
             
             update_job_status(engine, job_id, 'processing', base_progress + region_progress_step * 0.7)
             
+            # 5. Стартиране на модела за машинно обучение (ML Inference)
             logger.info(f"Triggering ML Inference for {effective_aoi['name']}...")
             ml_url = os.getenv("ML_BASE_URL", "http://ml:8500")
             
+            # Дефиниране на изходния файл за класификацията
             output_filename = os.path.basename(raw_file).replace(".tif", f"_job{job_id}_{idx}_classification.tif")
             output_path = os.path.join(output_dir, output_filename)
             
+            # Функция за конвертиране на пътищата спрямо файловата система на ML контейнера
             def to_ml_path(p):
                 abs_p = os.path.abspath(p)
                 if "/app/ml/" in abs_p:
@@ -225,6 +264,7 @@ def run_pipeline(job_id=None, bbox=None, aoi_name=None, cloud_max=None, display_
                     return p.replace("ml/", "", 1)
                 return p
             
+            # Подготовка на данните (payload), които се изпращат към ML услугата
             payload = {
                 "b2": to_ml_path(ml_bands["b2"]),
                 "b3": to_ml_path(ml_bands["b3"]),
@@ -235,6 +275,7 @@ def run_pipeline(job_id=None, bbox=None, aoi_name=None, cloud_max=None, display_
             }
             
             try:
+                # Симулатор за лентата на прогреса по време на ML анализа
                 from flows.downloader import ProgressSimulator
                 ml_start = base_progress + region_progress_step * 0.7
                 ml_end = base_progress + region_progress_step * 0.95
@@ -244,6 +285,7 @@ def run_pipeline(job_id=None, bbox=None, aoi_name=None, cloud_max=None, display_
                 )
                 sim.start_sim()
 
+                # Изпращане на POST заявка към ML API-то
                 resp = requests.post(f"{ml_url}/process_scene", json=payload)
                 
                 sim.stop()
@@ -254,6 +296,7 @@ def run_pipeline(job_id=None, bbox=None, aoi_name=None, cloud_max=None, display_
                     resp_json = resp.json()
                     stats = resp_json.get("stats", {})
                     
+                    # Извличане на SHAP стойности (ако са достъпни)
                     shap_data = []
                     try:
                         exp_resp = requests.post(f"{ml_url}/explain", json={"features": [0.1, 0.1, 0.1, 0.1, 0.1, 0.1]})
@@ -262,6 +305,7 @@ def run_pipeline(job_id=None, bbox=None, aoi_name=None, cloud_max=None, display_
                     except Exception as e:
                         logger.warning(f"Failed to fetch SHAP values: {e}")
                     
+                    # Записване на крайния резултат от ML модела в базата данни
                     upload_to_db(
                         output_path, 
                         db_url, 
@@ -281,6 +325,7 @@ def run_pipeline(job_id=None, bbox=None, aoi_name=None, cloud_max=None, display_
         update_job_status(engine, job_id, 'completed', 100)
         
     except Exception as e:
+        # В случай на грешка, обновяваме статуса на задачата на "failed"
         logger.exception(f"ETL Pipeline failed: {e}")
         update_job_status(engine, job_id, 'failed')
         raise

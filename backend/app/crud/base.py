@@ -12,9 +12,14 @@ ModelType = TypeVar("ModelType", bound=Base)
 
 
 class CRUDBase(Generic[ModelType]):
-    """Базов CRUD клас с транзакции и обработка на грешки."""
+    """
+    Базов CRUD клас (Create, Read, Update, Delete) с вградени транзакции и обработка на грешки.
+    Той се използва като основа, от която наследяват специфичните CRUD класове за всеки модел
+    (напр. CRUDUser, CRUDRegion). Този шаблон намалява дублирането на код.
+    """
     
     def __init__(self, model: Type[ModelType]):
+        # Инициализация с конкретния SQLAlchemy модел (напр. User)
         self.model = model
     
     def create(
@@ -28,22 +33,20 @@ class CRUDBase(Generic[ModelType]):
         Създава нов запис в базата данни.
         
         Args:
-            db: SQLAlchemy сесия
-            obj_in: Речник с данни за създаване
-            commit: Дали да се извърши commit (default: True)
+            db: SQLAlchemy сесия (връзка към базата данни)
+            obj_in: Речник с данни за създаване на обекта
+            commit: Дали да се извърши commit (запазване на промените) веднага.
         
         Returns:
-            Създаденият обект
-        
-        Raises:
-            HTTPException: При constraint violation или друга DB грешка
+            Създаденият обект, обогатен с ID от базата данни.
         """
         try:
+            # Инициализиране на ORM обекта
             db_obj = self.model(**obj_in)
-            db.add(db_obj)
+            db.add(db_obj) # Добавяне в текущата сесия
             if commit:
-                db.commit()
-                db.refresh(db_obj)
+                db.commit() # Физическо запазване в базата
+                db.refresh(db_obj) # Опресняване на обекта (зареждане на генерираното ID)
             return db_obj
         except IntegrityError as e:
             db.rollback()
@@ -65,7 +68,10 @@ class CRUDBase(Generic[ModelType]):
             )
     
     def get(self, db: Session, id: int) -> Optional[ModelType]:
-        """Връща запис по ID."""
+        """
+        Връща един запис по неговото първично ID.
+        Ако записът не е намерен, връща None.
+        """
         return db.query(self.model).filter(self.model.id == id).first()
     
     def get_multi(
@@ -75,7 +81,11 @@ class CRUDBase(Generic[ModelType]):
         skip: int = 0,
         limit: int = 100
     ) -> List[ModelType]:
-        """Връща списък от записи с pagination."""
+        """
+        Връща списък от записи с поддръжка на пагинация (странициране).
+        Параметърът `skip` пропуска даден брой записи (offset),
+        а `limit` ограничава максималния брой върнати записи.
+        """
         return db.query(self.model).offset(skip).limit(limit).all()
     
     def update(
@@ -87,39 +97,31 @@ class CRUDBase(Generic[ModelType]):
         commit: bool = True
     ) -> ModelType:
         """
-        Обновява съществуващ запис.
-        
-        Args:
-            db: SQLAlchemy сесия
-            db_obj: Обект за обновяване
-            obj_in: Речник с данни за обновяване (само непразни стойности)
-            commit: Дали да се извърши commit (default: True)
-        
-        Returns:
-            Обновеният обект
-        
-        Raises:
-            HTTPException: При constraint violation или друга DB грешка
+        Обновява съществуващ запис в базата данни.
+        Приема текущия обект от базата (db_obj) и новите данни (obj_in).
         """
         try:
-            # Accept both Pydantic models and plain dicts
+            # Приемане на данни както от Pydantic модели, така и от обикновени речници
             if hasattr(obj_in, 'model_dump'):
-                raw = obj_in.model_dump(exclude_unset=True)
+                raw = obj_in.model_dump(exclude_unset=True) # За Pydantic v2
             elif hasattr(obj_in, 'dict'):
-                raw = obj_in.dict(exclude_unset=True)
+                raw = obj_in.dict(exclude_unset=True) # За Pydantic v1
             else:
                 raw = obj_in
-            # Only skip keys whose value is *explicitly* None
+                
+            # Игнориране на ключове, чиято стойност е изрично None (ако не искаме да нулираме полета)
             update_data = {k: v for k, v in raw.items() if v is not None}
             
+            # Динамично обновяване на атрибутите на ORM обекта
             for field, value in update_data.items():
                 setattr(db_obj, field, value)
             
             if commit:
-                db.commit()
-                db.refresh(db_obj)
+                db.commit() # Запазване на промените
+                db.refresh(db_obj) # Опресняване на обекта
             return db_obj
         except IntegrityError as e:
+            # Обработка на грешки при нарушение на уникалността (Unique Constraint)
             db.rollback()
             error_msg = str(e.orig) if hasattr(e, 'orig') else str(e)
             if "unique" in error_msg.lower() or "duplicate" in error_msg.lower():
