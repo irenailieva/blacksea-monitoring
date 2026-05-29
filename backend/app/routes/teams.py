@@ -80,6 +80,61 @@ def read_team(
         raise HTTPException(status_code=404, detail="Team not found")
     return team
 
+@router.put("/{team_id}", response_model=schemas.TeamRead)
+def update_team(
+    *,
+    db: Session = Depends(get_db),
+    team_id: int,
+    team_in: schemas.TeamUpdate,
+    current_user: User = Depends(get_current_active_user),
+) -> Any:
+    """
+    Обновява информацията за екип (напр. промяна на името).
+    Изисква глобална роля 'admin'.
+    """
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can update teams")
+
+    team = crud.team.get(db=db, id=team_id)
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    # Проверка дали новото име вече е заето от друг екип
+    if team_in.name:
+        existing = crud.team.get_by_name(db, name=team_in.name)
+        if existing and existing.id != team_id:
+            raise HTTPException(
+                status_code=409,
+                detail="A team with this name already exists.",
+            )
+
+    team = crud.team.update(db=db, db_obj=team, obj_in=team_in)
+    return team
+
+@router.delete("/{team_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_team(
+    *,
+    db: Session = Depends(get_db),
+    team_id: int,
+    current_user: User = Depends(get_current_active_user),
+) -> None:
+    """
+    Изтрива екип от системата.
+    Изисква глобална роля 'admin'.
+    """
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can delete teams")
+
+    team = crud.team.get(db=db, id=team_id)
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+
+    # Изтриване на всички членства преди да изтрием самия екип,
+    # за да се избегне конфликт с NOT NULL ограничението върху team_id.
+    from app.models.team import TeamMembership
+    db.query(TeamMembership).filter(TeamMembership.team_id == team_id).delete()
+    crud.team.delete(db=db, id=team_id)
+
 @router.post("/{team_id}/members", response_model=schemas.TeamMembershipRead)
 def add_team_member(
     *,
@@ -143,3 +198,65 @@ def read_team_members(
         raise HTTPException(status_code=404, detail="Team not found")
         
     return team.members
+
+@router.put("/{team_id}/members/{user_id}", response_model=schemas.TeamMembershipRead)
+def update_team_member_role(
+    *,
+    db: Session = Depends(get_db),
+    team_id: int,
+    user_id: int,
+    role_in: schemas.TeamMembershipUpdate,
+    current_user: User = Depends(get_current_active_user),
+) -> Any:
+    """
+    Обновява ролята на конкретен член в екипа.
+    Изисква глобална роля 'admin'.
+    """
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can change member roles")
+    
+    # Проверка дали екипът съществува
+    team = crud.team.get(db=db, id=team_id)
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    # Намиране на членството
+    membership = crud.team_membership.get_by_user_and_team(
+        db, user_id=user_id, team_id=team_id
+    )
+    if not membership:
+        raise HTTPException(status_code=404, detail="Membership not found")
+    
+    # Обновяване на ролята
+    membership = crud.team_membership.update(db=db, db_obj=membership, obj_in=role_in)
+    return membership
+
+@router.delete("/{team_id}/members/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_team_member(
+    *,
+    db: Session = Depends(get_db),
+    team_id: int,
+    user_id: int,
+    current_user: User = Depends(get_current_active_user),
+) -> None:
+    """
+    Премахва потребител от екип.
+    Изисква глобална роля 'admin'.
+    """
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can remove team members")
+    
+    # Проверка дали екипът съществува
+    team = crud.team.get(db=db, id=team_id)
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    # Намиране на членството
+    membership = crud.team_membership.get_by_user_and_team(
+        db, user_id=user_id, team_id=team_id
+    )
+    if not membership:
+        raise HTTPException(status_code=404, detail="User is not a member of this team")
+    
+    # Изтриване на членството
+    crud.team_membership.delete(db=db, id=membership.id)

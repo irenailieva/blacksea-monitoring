@@ -41,8 +41,15 @@ class CRUDBase(Generic[ModelType]):
             Създаденият обект, обогатен с ID от базата данни.
         """
         try:
+            # Конвертиране на Pydantic модел към речник, ако е необходимо
+            if hasattr(obj_in, 'model_dump'):
+                create_data = obj_in.model_dump()
+            elif hasattr(obj_in, 'dict'):
+                create_data = obj_in.dict()
+            else:
+                create_data = obj_in
             # Инициализиране на ORM обекта
-            db_obj = self.model(**obj_in)
+            db_obj = self.model(**create_data)
             db.add(db_obj) # Добавяне в текущата сесия
             if commit:
                 db.commit() # Физическо запазване в базата
