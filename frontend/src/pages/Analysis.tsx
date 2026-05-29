@@ -8,7 +8,18 @@ import { Download, Loader2 } from 'lucide-react';
 import api from '@/api/axios';
 import { Region } from '@/api/types';
 
-// Страница (Page) за анализ на данни за конкретен регион
+// Форматира читаемо име за регион: AOI_27.810_43.119 -> "AOI 27.810°E, 43.119°N"
+function formatRegionName(name: string): string {
+    if (!name.startsWith('AOI_')) return name;
+    const parts = name.replace('AOI_', '').split('_');
+    if (parts.length >= 2) {
+        const lon = parseFloat(parts[0]).toFixed(3);
+        const lat = parseFloat(parts[1]).toFixed(3);
+        return `AOI  ${lon}°E, ${lat}°N`;
+    }
+    return name;
+}
+
 export default function Analysis() {
     // Състояния на компонента
     const [selectedRegion, setSelectedRegion] = useState<string>(''); // Избран регион за анализ
@@ -29,23 +40,29 @@ export default function Analysis() {
     useEffect(() => {
         const fetchRegions = async () => {
             try {
-                // Вземане на регионите от бекенда
                 const response = await api.get<Region[]>('/regions');
-                // Филтрираме динамично генерираните (потребителски) AOI региони, оставяйки само предефинираните (напр. "Варненско езеро")
-                const filteredRegions = response.data.filter(r => !r.name.startsWith('AOI_'));
-                setRegions(filteredRegions);
-                // Автоматично избиране на първия наличен регион, ако има такъв
-                if (filteredRegions.length > 0) {
-                    setSelectedRegion(filteredRegions[0].id.toString());
+                // Показваме всички региони — включително динамично генерираните AOI региони,
+                // защото именно те съдържат обработените сцени.
+                // Предефинираните (именувани) региони се показват първи.
+                const named = response.data.filter(r => !r.name.startsWith('AOI_'));
+                const aois  = response.data.filter(r =>  r.name.startsWith('AOI_'));
+                const ordered = [...named, ...aois];
+                setRegions(ordered);
+                // Автоматично избиране: предпочитаме регион с вече обработени сцени.
+                // Падаме обратно на първия наличен регион, ако няма такъв.
+                const firstWithData = aois[0] ?? ordered[0];
+                if (firstWithData) {
+                    setSelectedRegion(firstWithData.id.toString());
                 }
             } catch (error) {
                 console.error('Неуспешно извличане на регионите:', error);
             } finally {
-                setLoading(false); // Край на зареждането
+                setLoading(false);
             }
         };
         fetchRegions();
     }, []);
+
 
     // Извличане на статистическите данни при промяна на избрания регион
     useEffect(() => {
@@ -119,7 +136,7 @@ export default function Analysis() {
                         <SelectContent>
                             {regions.map(region => (
                                 <SelectItem key={region.id} value={region.id.toString()}>
-                                    {region.name}
+                                    {formatRegionName(region.name)}
                                 </SelectItem>
                             ))}
                         </SelectContent>

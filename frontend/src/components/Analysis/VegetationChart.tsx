@@ -6,10 +6,12 @@ import api from '@/api/axios';
 
 // Интерфейс, описващ данните за тенденциите (тренд) във времето
 interface TrendData {
-    date: string; // Дата на сателитната снимка
-    vegetation: number; // Площ на растителността
-    sand: number; // Площ на пясъка
+    date: string;
+    vegetation: number;
+    sand: number;
+    water: number;
 }
+
 
 // Свойства: очакваме ID на регион, за който да покажем тенденциите
 interface VegetationChartProps {
@@ -68,8 +70,9 @@ export function VegetationChart({ regionId }: VegetationChartProps) {
                         <LineChart 
                           data={trendData.length > 0 ? trendData.map(d => ({ 
                               ...d, 
-                              vegetation: Number((d.vegetation / 1_000_000).toFixed(2)), 
-                              sand: Number((d.sand / 1_000_000).toFixed(2)) 
+                              vegetation: Number((d.vegetation / 1_000_000).toFixed(3)), 
+                              sand: Number((d.sand / 1_000_000).toFixed(3)),
+                              water: Number((d.water / 1_000_000).toFixed(3))
                           })) : []} 
                           margin={{ top: 5, right: 10, left: 10, bottom: 0 }}
                         >
@@ -98,23 +101,35 @@ export function VegetationChart({ regionId }: VegetationChartProps) {
                                 labelStyle={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px' }}
                             />
                             <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                            {/* Линия, представяща растителността (в зелено) */}
+                            {/* Линия за растителността */}
                             <Line
-                                type="monotone" // Загладена линия
+                                type="monotone"
                                 dataKey="vegetation"
-                                stroke="#16a34a" // Зелен цвят
+                                name="Растителност (km²)"
+                                stroke="#16a34a"
                                 strokeWidth={2}
-                                dot={false} // Скрива точките по подразбиране
-                                activeDot={{ r: 4, fill: "#16a34a" }} // Показва точка само при посочване
+                                dot={{ r: 3, fill: '#16a34a' }}
+                                activeDot={{ r: 5 }}
                             />
-                            {/* Линия, представяща пясъка (в жълто) */}
+                            {/* Линия за пясъка */}
                             <Line
                                 type="monotone"
                                 dataKey="sand"
-                                stroke="#eab308" // Жълт цвят
+                                name="Пясък/Абиотични (km²)"
+                                stroke="#eab308"
                                 strokeWidth={2}
-                                dot={false}
-                                activeDot={{ r: 4, fill: "#eab308" }}
+                                dot={{ r: 3, fill: '#eab308' }}
+                                activeDot={{ r: 5 }}
+                            />
+                            {/* Линия за вода */}
+                            <Line
+                                type="monotone"
+                                dataKey="water"
+                                name="Вода (km²)"
+                                stroke="#0ea5e9"
+                                strokeWidth={2}
+                                dot={{ r: 3, fill: '#0ea5e9' }}
+                                activeDot={{ r: 5 }}
                             />
                         </LineChart>
                     </ResponsiveContainer>

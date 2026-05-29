@@ -36,16 +36,22 @@ def get_vegetation_trend(
         Scene.acquisition_date,
         func.sum(
             case(
-                [(ClassificationResult.label == 'vegetation', ClassificationResult.area_m2)], 
+                (ClassificationResult.label == 'vegetation', ClassificationResult.area_m2),
                 else_=0
             )
         ).label('vegetation'),
         func.sum(
             case(
-                [(ClassificationResult.label == 'sand', ClassificationResult.area_m2)], 
+                (ClassificationResult.label == 'sand', ClassificationResult.area_m2),
                 else_=0
             )
-        ).label('sand')
+        ).label('sand'),
+        func.sum(
+            case(
+                (ClassificationResult.label == 'water', ClassificationResult.area_m2),
+                else_=0
+            )
+        ).label('water')
     ).join(ClassificationResult, Scene.id == ClassificationResult.scene_id)\
      .filter(Scene.region_id == region_id)\
      .group_by(Scene.acquisition_date)\
@@ -62,7 +68,8 @@ def get_vegetation_trend(
         {
             "date": r.acquisition_date.strftime("%Y-%m-%d"),
             "vegetation": r.vegetation or 0,
-            "sand": r.sand or 0
+            "sand": r.sand or 0,
+            "water": r.water or 0
         }
         for r in results
     ]
