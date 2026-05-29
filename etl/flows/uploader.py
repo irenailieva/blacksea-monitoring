@@ -48,29 +48,51 @@ def upload_to_db(file_path: str, db_url: str, aoi_config: dict, scene_id: str = 
             minx, miny, maxx, maxy = bounds.left, bounds.bottom, bounds.right, bounds.top
             wkt_geom = f"POLYGON(({minx} {miny}, {minx} {maxy}, {maxx} {maxy}, {maxx} {miny}, {minx} {miny}))"
             
-            # 1. Търсене или създаване на регион (Region)
-            region_name = aoi_config.get("name", "unknown_region")
-            # Проверка дали регионът вече съществува в базата
-            region = session.query(Region).filter_by(name=region_name).first()
-            if not region:
-                logger.info(f"Creating new region: {region_name}")
-                # Изчисляване на приблизителната площ в квадратни километри (km²) от ограничителната рамка
-                import math
-                lat_mid = (miny + maxy) / 2.0
-                width_km = abs(maxx - minx) * 111.32 * math.cos(math.radians(lat_mid))
-                height_km = abs(maxy - miny) * 110.57
-                computed_area_km2 = max(round(width_km * height_km, 4), 0.0001)
-                
-                # Използване на WKTElement за запазване на геометрията в PostGIS формат (SRID=4326)
-                geometry_element = WKTElement(wkt_geom, srid=4326)
-                region = Region(
-                    name=region_name,
-                    geometry=geometry_element,
-                    area_km2=computed_area_km2
-                )
-                session.add(region)
-                session.commit()
-                session.refresh(region)
+            # 1. Намиране на регион (Region) — винаги избираме най-близкия предефиниран
+            #    (именуван) регион по географски принцип, вместо да създаваме нови AOI_* редове.
+            #    Така сцените се агрегират коректно под Varna Bay, Burgas Bay и т.н.
+            from sqlalchemy import text as sa_text
+            centroid_lon = (minx + maxx) / 2.0
+            centroid_lat = (miny + maxy) / 2.0
+
+            nearest_row = session.execute(
+                sa_text("""
+                    SELECT id, name
+                    FROM regions
+                    WHERE name NOT LIKE 'AOI\_%' ESCAPE '\\'
+                    ORDER BY ST_Distance(
+                        ST_Centroid(geometry),
+                        ST_SetSRID(ST_MakePoint(:lon, :lat), 4326)
+                    )
+                    LIMIT 1
+                """),
+                {"lon": centroid_lon, "lat": centroid_lat}
+            ).fetchone()
+
+            if nearest_row:
+                region = session.query(Region).filter_by(id=nearest_row.id).first()
+                logger.info(f"Matched AOI to nearest named region: '{region.name}' (id={region.id})")
+            else:
+                # Fallback: no named regions exist yet — create one with the AOI name
+                region_name = aoi_config.get("name", "unknown_region")
+                region = session.query(Region).filter_by(name=region_name).first()
+                if not region:
+                    logger.warning(f"No named regions found. Creating fallback: {region_name}")
+                    import math
+                    lat_mid = (miny + maxy) / 2.0
+                    width_km = abs(maxx - minx) * 111.32 * math.cos(math.radians(lat_mid))
+                    height_km = abs(maxy - miny) * 110.57
+                    computed_area_km2 = max(round(width_km * height_km, 4), 0.0001)
+                    geometry_element = WKTElement(wkt_geom, srid=4326)
+                    region = Region(
+                        name=region_name,
+                        geometry=geometry_element,
+                        area_km2=computed_area_km2
+                    )
+                    session.add(region)
+                    session.commit()
+                    session.refresh(region)
+
             
             # 2. Търсене или създаване на сцена (Scene)
             filename = os.path.basename(file_path)
