@@ -27,7 +27,7 @@ function RequireAuth({ children }: RequireAuthProps) {
   const location = useLocation();
 
   // Докато се проверява автентикацията, показваме индикатор за зареждане
-  if (isLoading) return <div>Зареждане...</div>;
+  if (isLoading) return <div>Loading...</div>;
   
   // Ако няма валиден потребител, пренасочваме към /login и запазваме пътя, от който идва
   if (!user) return <Navigate to="/login" state={{ from: location }} replace />;
@@ -48,7 +48,7 @@ function RequireRole({ children, roles }: RequireRoleProps) {
   const { user, isLoading } = useAuth();
 
   // Изчакваме приключването на проверката за сесия
-  if (isLoading) return <div>Зареждане...</div>;
+  if (isLoading) return <div>Loading...</div>;
   
   // Ако потребителят липсва или неговата роля не е сред позволените, го връщаме на началната страница
   if (!user || !roles.includes(user.role)) return <Navigate to="/" replace />;

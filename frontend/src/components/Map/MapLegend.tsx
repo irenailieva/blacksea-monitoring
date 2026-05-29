@@ -1,8 +1,7 @@
-// Дефиниране на елементите в легендата - класове, цветове и описания спрямо ML модела
 const legendItems = [
-    { label: 'Водорасли / Растителност', color: '#22c55e', description: 'Подводна органична материя' },
-    { label: 'Пясък / Плитчини', color: '#facc15', description: 'Седименти и плитки зони' },
-    { label: 'Чиста вода', color: '#0ea5e9', description: 'Дълбока или филтрирана вода' },
+    { label: 'Algae / Vegetation', color: '#22c55e', description: 'Submerged organic matter' },
+    { label: 'Sand / Shallows', color: '#facc15', description: 'Sediments and shallow zones' },
+    { label: 'Open Water', color: '#0ea5e9', description: 'Deep or clear water' },
 ];
 
 // Компонент, визуализиращ легенда върху картата
@@ -13,7 +12,7 @@ export default function MapLegend() {
             {/* Заглавие на легендата с пулсиращ индикатор */}
             <h4 className="text-sm font-bold mb-3 flex items-center gap-2">
                 <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-                Научна легенда
+                Scientific Legend
             </h4>
             
             {/* Списък с елементите на легендата */}

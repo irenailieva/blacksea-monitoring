@@ -192,18 +192,18 @@ export default function Dashboard() {
             {/* Горен панел (Header) */}
             <div className="flex-none px-4 py-3 m-4 mb-0 rounded-lg flex items-center justify-between border-2 border-slate-300 dark:border-slate-700 bg-background shadow-sm z-10">
                 <div className="flex items-center gap-6">
-                    <h2 className="text-3xl font-bold tracking-tight">Карта на мониторинга</h2>
+                    <h2 className="text-3xl font-bold tracking-tight">Monitoring Map</h2>
                     {/* Табове за превключване между Карта и Детайлен Анализ */}
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-[400px]">
                         <TabsList className="grid w-full grid-cols-2">
-                            <TabsTrigger value="map">Изследовател</TabsTrigger>
-                            <TabsTrigger value="analysis" disabled={!selectedScene}>Табло за анализи</TabsTrigger>
+                            <TabsTrigger value="map">Explorer</TabsTrigger>
+                            <TabsTrigger value="analysis" disabled={!selectedScene}>Analysis Dashboard</TabsTrigger>
                         </TabsList>
                     </Tabs>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <Satellite className="h-3.5 w-3.5" />
-                    Очертайте зона на картата, за да започнете анализ
+                    Draw a zone on the map to start analysis
                 </div>
             </div>
 
@@ -227,7 +227,7 @@ export default function Dashboard() {
                                         {(activeJob.status === 'pending' || activeJob.status === 'processing') && (
                                             <Loader2 className="h-4 w-4 animate-spin text-primary" />
                                         )}
-                                        Анализ на зона (AOI)
+                                        Zone Analysis (AOI)
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-2">
@@ -248,7 +248,7 @@ export default function Dashboard() {
                                                     className="text-[10px] uppercase"
                                                 >
                                                     {activeJob.status === 'pending' ? (
-                                                        <><Clock className="h-2.5 w-2.5 mr-1" />В опашка</>
+                                                        <><Clock className="h-2.5 w-2.5 mr-1" />Queued</>
                                                     ) : activeJob.status}
                                                 </Badge>
                                                 <span className="text-[10px] text-muted-foreground">
@@ -261,11 +261,11 @@ export default function Dashboard() {
                                         <div className="flex items-center justify-between pt-1">
                                             {activeJob.status === 'completed' ? (
                                                 <p className="text-[10px] text-green-600 font-medium">
-                                                    ✓ Класификацията е заредена
+                                                    ✓ Classification loaded
                                                 </p>
                                             ) : (
                                                 <p className="text-[10px] text-destructive">
-                                                    Грешка в пайплайна — вижте логовете
+                                                    Pipeline error — check the logs
                                                 </p>
                                             )}
                                             {/* Бутон за премахване на известието за завършена задача */}
@@ -275,7 +275,7 @@ export default function Dashboard() {
                                                 className="h-6 text-[10px] px-2 shrink-0"
                                                 onClick={() => setActiveJob(null)}
                                             >
-                                                Скрий
+                                                Dismiss
                                             </Button>
                                         </div>
                                     )}
@@ -288,14 +288,14 @@ export default function Dashboard() {
                             <CardHeader className="pb-3 shrink-0">
                                 <CardTitle className="text-lg flex items-center gap-2">
                                     <ImageIcon className="h-4 w-4" />
-                                    Налични сцени ({sortedScenes.length})
+                                    Available Scenes ({sortedScenes.length})
                                     <Button
                                         variant="ghost"
                                         size="icon"
                                         className="h-5 w-5 ml-auto"
                                         onClick={() => fetchScenes()}
                                         disabled={refreshing}
-                                        title="Опресняване на сцените"
+                                        title="Refresh scenes"
                                     >
                                         <RefreshCw className={`h-3 w-3 ${refreshing ? 'animate-spin' : ''}`} />
                                     </Button>
@@ -307,8 +307,8 @@ export default function Dashboard() {
                                     {sortedScenes.length === 0 ? (
                                         <div className="p-8 text-xs text-muted-foreground text-center flex flex-col items-center gap-2">
                                             <Layers className="h-8 w-8 opacity-20" />
-                                            <p>Няма налични сцени.</p>
-                                            <p className="text-[10px]">Очертайте зона на картата, за да стартирате първия си анализ.</p>
+                                            <p>No available scenes.</p>
+                                            <p className="text-[10px]">Draw a zone on the map to start your first analysis.</p>
                                         </div>
                                     ) : (
                                         // Рендиране на списъка със сцени
@@ -332,8 +332,8 @@ export default function Dashboard() {
                                                         </span>
                                                         <Badge variant="outline" className="text-[9px] h-4">
                                                             {scene.cloud_cover !== null && scene.cloud_cover !== undefined
-                                                                ? `${scene.cloud_cover.toFixed(1)}% облаци`
-                                                                : 'Ръчно'}
+                                                                ? `${scene.cloud_cover.toFixed(1)}% clouds`
+                                                                : 'Manual'}
                                                         </Badge>
                                                     </div>
                                                 </div>
@@ -347,13 +347,13 @@ export default function Dashboard() {
                         {/* Инструкции за работа (Instructions card) */}
                         <Card className="border-dashed shrink-0">
                             <CardContent className="p-4 space-y-2">
-                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Как работи</p>
+                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">How it works</p>
                                 <ol className="text-[11px] text-muted-foreground space-y-1.5 list-decimal list-inside">
-                                    <li>Кликнете <strong>"Анализирай Зона"</strong> на картата</li>
-                                    <li>Плъзнете, за да очертаете вашата зона на интерес</li>
-                                    <li>Кликнете <strong>"Анализирай"</strong></li>
-                                    <li>Изчакайте завършването на процеса (пайплайна)</li>
-                                    <li>Слоят с класификацията ще се зареди автоматично</li>
+                                    <li>Click <strong>"Analyze Zone"</strong> on the map</li>
+                                    <li>Drag to draw your area of interest</li>
+                                    <li>Click <strong>"Analyze"</strong></li>
+                                    <li>Wait for the pipeline to complete</li>
+                                    <li>The classification layer will load automatically</li>
                                 </ol>
                             </CardContent>
                         </Card>
@@ -379,7 +379,7 @@ export default function Dashboard() {
             {activeTab === 'analysis' && selectedScene && (
                 <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-6">
                     <div className="flex items-center justify-between">
-                        <h3 className="text-2xl font-bold tracking-tight">Анализ на сцена: {selectedScene.display_name || selectedScene.scene_id}</h3>
+                        <h3 className="text-2xl font-bold tracking-tight">Scene Analysis: {selectedScene.display_name || selectedScene.scene_id}</h3>
                         <Badge variant="outline" className="text-xs">
                             {selectedScene.acquisition_date}
                         </Badge>

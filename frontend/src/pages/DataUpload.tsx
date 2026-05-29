@@ -48,17 +48,17 @@ export default function DataUpload() {
             }));
             
             // При успешно качване на всички файлове
-            setStatus({ type: 'success', message: 'Всички файлове са качени успешно!' });
+            setStatus({ type: 'success', message: 'All files uploaded successfully!' });
             setFiles([]); // Изчистване на списъка
         } catch (error: any) {
             console.error('Грешка при качване:', error);
             
             // Обработка на съобщението за грешка, идващо от бекенда (FastAPI detail) или от мрежата
-            let errorMsg = 'Възникна грешка при качването. Моля, опитайте отново.';
+            let errorMsg = 'An error occurred during upload. Please try again.';
             if (error.response?.data?.detail) {
-                errorMsg = `Грешка при качване: ${error.response.data.detail}`;
+                errorMsg = `Upload error: ${error.response.data.detail}`;
             } else if (error.message) {
-                errorMsg = `Мрежова грешка: ${error.message}`;
+                errorMsg = `Network error: ${error.message}`;
             }
             setStatus({ type: 'error', message: errorMsg });
         } finally {
@@ -72,8 +72,8 @@ export default function DataUpload() {
                 {/* Горен панел със заглавие и бутон за тригериране на ETL процес */}
                 <div className="flex items-center justify-between p-1">
                     <div>
-                        <h2 className="text-3xl font-bold tracking-tight text-primary">Качване на данни</h2>
-                        <p className="text-muted-foreground mt-1 text-sm">Качване на локални данни или стартиране на автоматизиран Sentinel-2 процес.</p>
+                        <h2 className="text-3xl font-bold tracking-tight text-primary">Data Upload</h2>
+                        <p className="text-muted-foreground mt-1 text-sm">Upload local data or trigger an automated Sentinel-2 pipeline.</p>
                     </div>
                     {/* Бутон за извикване на автоматизирания ETL (Extract, Transform, Load) процес */}
                     <Button 
@@ -83,14 +83,14 @@ export default function DataUpload() {
                             try {
                                 // Изпращане на заявка за стартиране на фонова задача на сървъра
                                 await api.post('/scenes/etl-trigger');
-                                setStatus({ type: 'success', message: 'Автоматичният ETL процес стартира успешно!'});
+                                setStatus({ type: 'success', message: 'Automated ETL pipeline started successfully!'});
                             } catch(e) {
-                                setStatus({ type: 'error', message: 'Неуспешно стартиране на ETL процес.'});
+                                setStatus({ type: 'error', message: 'Failed to start ETL pipeline.'});
                             }
                         }}
                     >
                         <Activity className="mr-2 h-4 w-4" /> 
-                        Извличане от Sentinel-2
+                        Fetch from Sentinel-2
                     </Button>
                 </div>
 
@@ -99,28 +99,28 @@ export default function DataUpload() {
                     <CardHeader className="pb-3">
                         <CardTitle className="text-lg flex items-center gap-2">
                             <AlertCircle className="w-5 h-5 text-primary" />
-                            Указания за обработка
+                            Processing Guidelines
                         </CardTitle>
                         <CardDescription>
-                            Важна информация за гарантиране на успешното качване и моделиране.
+                            Important information to ensure successful upload and modelling.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
                         <div className="grid gap-6 md:grid-cols-2 text-sm">
                             <div className="space-y-3 bg-background/50 p-4 rounded-lg border border-border/50">
-                                <h4 className="font-semibold text-primary">GeoTIFF Качвания</h4>
+                                <h4 className="font-semibold text-primary">GeoTIFF Uploads</h4>
                                 <ul className="list-disc pl-4 space-y-1.5 text-muted-foreground">
-                                    <li>Трябва да са в проекция <span className="font-medium text-foreground">EPSG:4326</span> или <span className="font-medium text-foreground">UTM 35N</span>.</li>
-                                    <li>Максимален размер на файла: <span className="font-medium text-foreground">500MB</span>.</li>
-                                    <li>Уверете се, че растерните канали са подредени правилно (напр. <span className="font-medium text-foreground">B4, B3, B2, B8</span> за Sentinel-2).</li>
+                                    <li>Must be projected in <span className="font-medium text-foreground">EPSG:4326</span> or <span className="font-medium text-foreground">UTM 35N</span>.</li>
+                                    <li>Maximum file size: <span className="font-medium text-foreground">500MB</span>.</li>
+                                    <li>Ensure raster bands are ordered correctly (e.g., <span className="font-medium text-foreground">B4, B3, B2, B8</span> for Sentinel-2).</li>
                                 </ul>
                             </div>
                             <div className="space-y-3 bg-background/50 p-4 rounded-lg border border-border/50">
-                                <h4 className="font-semibold text-primary">GPS & Векторни данни</h4>
+                                <h4 className="font-semibold text-primary">GPS &amp; Vector Data</h4>
                                 <ul className="list-disc pl-4 space-y-1.5 text-muted-foreground">
-                                    <li>CSV файловете трябва изрично да съдържат колони <span className="font-medium text-foreground">'lat'</span> и <span className="font-medium text-foreground">'lon'</span>.</li>
-                                    <li>GeoJSON файловете трябва да съдържат <span className="font-medium text-foreground">FeatureCollection</span> от тип Polygons или Points.</li>
-                                    <li>Геометрията трябва да се припокрива с конфигурираните региони (AOI).</li>
+                                    <li>CSV files must explicitly contain <span className="font-medium text-foreground">'lat'</span> and <span className="font-medium text-foreground">'lon'</span> columns.</li>
+                                    <li>GeoJSON files must contain a <span className="font-medium text-foreground">FeatureCollection</span> of Polygons or Points.</li>
+                                    <li>Geometry must overlap with configured regions (AOI).</li>
                                 </ul>
                             </div>
                         </div>
@@ -135,16 +135,16 @@ export default function DataUpload() {
                         <CardHeader className="bg-muted/20 border-b border-border/50 pb-4">
                             <CardTitle className="flex items-center gap-2">
                                 <Upload className="w-5 h-5" />
-                                Ръчно качване
+                                Manual Upload
                             </CardTitle>
                             <CardDescription>
-                                Ръчно вмъкване на Sentinel-2 GeoTIFF файлове, ортофотопланове от дронове или GPS логове.
+                                Manually add Sentinel-2 GeoTIFF files, drone orthomosaics, or GPS logs.
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6 pt-6">
                             {/* Интерактивна зона за влачене и пускане (Drag and Drop) / Избор на файл */}
                             <div className="grid w-full items-center gap-1.5 focus-within:ring-2 focus-within:ring-primary/20 rounded-xl p-1 transition-all">
-                                <Label htmlFor="data-file" className="px-1 text-xs font-semibold uppercase text-muted-foreground tracking-wider">Изберете файлове</Label>
+                                <Label htmlFor="data-file" className="px-1 text-xs font-semibold uppercase text-muted-foreground tracking-wider">Select files</Label>
                                 <label
                                     htmlFor="data-file"
                                     className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed rounded-xl cursor-pointer bg-muted/20 hover:bg-muted/40 border-primary/20 hover:border-primary/50 transition-all duration-300"
@@ -154,10 +154,10 @@ export default function DataUpload() {
                                             <Upload className="w-8 h-8 text-primary" />
                                         </div>
                                         <p className="mb-2 text-sm text-foreground text-center px-4">
-                                            <span className="font-semibold text-primary hover:underline">Кликнете тук</span> или плъзнете файловете тук
+                                            <span className="font-semibold text-primary hover:underline">Click here</span> or drag files here
                                         </p>
                                         <p className="text-xs text-muted-foreground">
-                                            Поддържат се: .TIF, .TIFF, .CSV, .GEOJSON
+                                            Supported: .TIF, .TIFF, .CSV, .GEOJSON
                                         </p>
                                     </div>
                                     <Input
@@ -219,12 +219,12 @@ export default function DataUpload() {
                                 {uploading ? (
                                     <span className="flex items-center gap-2">
                                         <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent" />
-                                        Качването се обработва...
+                                        Processing upload...
                                     </span>
                                 ) : (
                                     <>
                                         <Upload className="mr-2 h-4 w-4" />
-                                        Започни сигурно качване
+                                        Start secure upload
                                     </>
                                 )}
                             </Button>
@@ -237,7 +237,7 @@ export default function DataUpload() {
                             <div className="flex items-center justify-between">
                                 <CardTitle className="flex items-center gap-2">
                                     <Activity className="h-5 w-5 text-primary" />
-                                    Системен монитор
+                                    System Monitor
                                 </CardTitle>
                                 {/* Индикатор (пулсираща точка) за "На живо" */}
                                 <span className="relative flex h-3 w-3">
@@ -246,7 +246,7 @@ export default function DataUpload() {
                                 </span>
                             </div>
                             <CardDescription>
-                                Проследяване в реално време на активните и скорошните процеси.
+                                Real-time tracking of active and recent pipeline tasks.
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="p-0">

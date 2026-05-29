@@ -25,16 +25,16 @@ export const useNotifications = create<NotificationStore>((set) => ({
     notifications: [
         {
             id: 1,
-            title: 'Предупреждение: Спад в растителността',
-            message: 'Засечен е драстичен спад в покритието (>20%) в района на Варненския залив.',
+            title: 'Warning: Vegetation Drop',
+            message: 'A significant drop in coverage (>20%) was detected in the Varna Bay area.',
             type: 'alert',
             timestamp: new Date(Date.now() - 120000).toISOString(),
             read: false,
         },
         {
             id: 2,
-            title: 'Обработена нова сцена',
-            message: 'Сцената S2B_MSIL2A_20231215 от Sentinel-2 вече е налична.',
+            title: 'New scene processed',
+            message: 'Scene S2B_MSIL2A_20231215 from Sentinel-2 is now available.',
             type: 'info',
             timestamp: new Date(Date.now() - 3600000).toISOString(),
             read: false,

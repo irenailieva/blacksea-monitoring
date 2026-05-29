@@ -34,7 +34,7 @@ export default function Register() {
 
         // Валидация на клиентска страна: проверка дали двете пароли съвпадат
         if (formData.password !== formData.confirmPassword) {
-            setError('Паролите не съвпадат');
+            setError('Passwords do not match');
             return;
         }
 
@@ -48,12 +48,12 @@ export default function Register() {
             });
             
             // Успех
-            setSuccessMsg('Регистрацията е успешна! Моля, влезте в системата.');
+            setSuccessMsg('Registration successful! Please sign in.');
             // Пренасочване към страницата за вход след 2 секунди, за да се види съобщението
             setTimeout(() => navigate('/login'), 2000);
         } catch (err: any) {
             // Извличане на съобщението за грешка от FastAPI отговора, ако съществува
-            const errorMsg = err.response?.data?.detail || 'Регистрацията беше неуспешна';
+            const errorMsg = err.response?.data?.detail || 'Registration failed';
             setError(errorMsg);
         }
     };
@@ -67,8 +67,8 @@ export default function Register() {
                         <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-50 mb-4 border border-blue-100">
                             <Waves className="w-8 h-8 text-blue-600" />
                         </div>
-                        <h2 className="text-3xl font-bold text-slate-800 tracking-tight">Създаване на акаунт</h2>
-                        <p className="text-slate-500 mt-2">Присъединете се към мрежата за мониторинг</p>
+                        <h2 className="text-3xl font-bold text-slate-800 tracking-tight">Create Account</h2>
+                        <p className="text-slate-500 mt-2">Join the monitoring network</p>
                     </div>
 
                     {/* Съобщения за обратна връзка */}
@@ -96,7 +96,7 @@ export default function Register() {
                                     name="username"
                                     required
                                     className="block w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-slate-900 placeholder:text-slate-400"
-                                    placeholder="Потребителско име"
+                                    placeholder="Username"
                                     value={formData.username}
                                     onChange={handleChange}
                                 />
@@ -114,7 +114,7 @@ export default function Register() {
                                     name="email"
                                     required
                                     className="block w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-slate-900 placeholder:text-slate-400"
-                                    placeholder="Имейл адрес"
+                                    placeholder="Email address"
                                     value={formData.email}
                                     onChange={handleChange}
                                 />
@@ -132,7 +132,7 @@ export default function Register() {
                                     name="password"
                                     required
                                     className="block w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-slate-900 placeholder:text-slate-400"
-                                    placeholder="Парола"
+                                    placeholder="Password"
                                     value={formData.password}
                                     onChange={handleChange}
                                 />
@@ -150,7 +150,7 @@ export default function Register() {
                                     name="confirmPassword"
                                     required
                                     className="block w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-slate-900 placeholder:text-slate-400"
-                                    placeholder="Потвърдете паролата"
+                                    placeholder="Confirm password"
                                     value={formData.confirmPassword}
                                     onChange={handleChange}
                                 />
@@ -161,16 +161,16 @@ export default function Register() {
                             type="submit"
                             className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-md text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all active:scale-[0.98] mt-6"
                         >
-                            Регистрация
+                            Register
                         </button>
                     </form>
 
                     {/* Линк към страницата за вход */}
                     <div className="mt-8 text-center border-t border-slate-100 pt-6">
                         <p className="text-sm text-slate-500">
-                            Вече имате акаунт?{' '}
+                            Already have an account?{' '}
                             <Link to="/login" className="font-semibold text-blue-600 hover:text-blue-700 transition-colors">
-                                Влезте оттук
+                                Sign in here
                             </Link>
                         </p>
                     </div>

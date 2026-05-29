@@ -13,7 +13,7 @@ export default function Settings() {
         <div className="h-full overflow-y-auto pr-2">
             {/* Заглавна част */}
             <div className="mx-auto grid w-full max-w-6xl gap-2 py-6">
-                <h1 className="text-3xl font-semibold">Настройки</h1>
+                <h1 className="text-3xl font-semibold">Settings</h1>
             </div>
             
             {/* Основен изглед с навигация вляво и съдържание вдясно */}
@@ -21,50 +21,50 @@ export default function Settings() {
                 {/* Странична навигация (За момента статична, но подготвена за бъдещо разширение) */}
                 <nav className="grid gap-4 text-sm text-muted-foreground">
                     <a href="#" className="font-semibold text-primary">
-                        Общи
+                        General
                     </a>
-                    <a href="#">Сигурност</a>
-                    <a href="#">Интеграции</a>
-                    <a href="#">Поддръжка</a>
-                    <a href="#">Организации</a>
-                    <a href="#">Разширени</a>
+                    <a href="#">Security</a>
+                    <a href="#">Integrations</a>
+                    <a href="#">Support</a>
+                    <a href="#">Organizations</a>
+                    <a href="#">Advanced</a>
                 </nav>
                 
                 <div className="grid gap-6">
                     {/* Карта за настройки на потребителския профил */}
                     <Card>
                         <CardHeader>
-                            <CardTitle>Потребителско име</CardTitle>
+                            <CardTitle>Username</CardTitle>
                             <CardDescription>
-                                Това е вашето публично име. Може да бъде истинското ви име или псевдоним.
+                                This is your public display name. It can be your real name or a pseudonym.
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <form>
                                 {/* Полето е предварително попълнено с името на логнатия потребител */}
-                                <Input placeholder="Име" defaultValue={user?.username || ""} />
+                                <Input placeholder="Name" defaultValue={user?.username || ""} />
                             </form>
                         </CardContent>
                         <CardFooter className="border-t px-6 py-4">
-                            <Button>Запази</Button>
+                            <Button>Save</Button>
                         </CardFooter>
                     </Card>
 
                     {/* Карта за настройки на известията */}
                     <Card>
                         <CardHeader>
-                            <CardTitle>Известия</CardTitle>
+                            <CardTitle>Notifications</CardTitle>
                             <CardDescription>
-                                Конфигурирайте как получавате системни известия.
+                                Configure how you receive system notifications.
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="grid gap-4">
                             {/* Опция: Всички известия */}
                             <div className="-mx-2 flex items-start space-x-4 rounded-md p-2 transition-all hover:bg-accent hover:text-accent-foreground">
                                 <div className="space-y-1">
-                                    <p className="text-sm font-medium leading-none">Всичко</p>
+                                    <p className="text-sm font-medium leading-none">Everything</p>
                                     <p className="text-sm text-muted-foreground">
-                                        Имейл обобщения, споменавания и цялата активност (напр. завършен ETL).
+                                        Email digests, mentions, and all activity (e.g., completed ETL).
                                     </p>
                                 </div>
                                 <div className="ml-auto">
@@ -75,9 +75,9 @@ export default function Settings() {
                             {/* Опция: Само важни (избрана по подразбиране) */}
                             <div className="-mx-2 flex items-start space-x-4 rounded-md bg-accent p-2 text-accent-foreground transition-all">
                                 <div className="space-y-1">
-                                    <p className="text-sm font-medium leading-none">Само важни</p>
+                                    <p className="text-sm font-medium leading-none">Important only</p>
                                     <p className="text-sm text-muted-foreground">
-                                        Само критични грешки и системни предупреждения.
+                                        Only critical errors and system warnings.
                                     </p>
                                 </div>
                                 <div className="ml-auto">
@@ -88,9 +88,9 @@ export default function Settings() {
                             {/* Опция: Без известия */}
                             <div className="-mx-2 flex items-start space-x-4 rounded-md p-2 transition-all hover:bg-accent hover:text-accent-foreground">
                                 <div className="space-y-1">
-                                    <p className="text-sm font-medium leading-none">Игнориране</p>
+                                    <p className="text-sm font-medium leading-none">Ignore</p>
                                     <p className="text-sm text-muted-foreground">
-                                        Изключване на всички известия.
+                                        Turn off all notifications.
                                     </p>
                                 </div>
                                 <div className="ml-auto">
@@ -99,7 +99,7 @@ export default function Settings() {
                             </div>
                         </CardContent>
                         <CardFooter className="border-t px-6 py-4">
-                            <Button>Запази</Button>
+                            <Button>Save</Button>
                         </CardFooter>
                     </Card>
                 </div>

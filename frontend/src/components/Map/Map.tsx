@@ -89,7 +89,7 @@ export default function AppMap({ regions, selectedSceneUrl, onAoiSubmit }: MapPr
                     </LayersControl.BaseLayer>
                     
                     {/* Базов слой: Сателитна снимка (Esri) */}
-                    <LayersControl.BaseLayer name="Сателит (Esri)">
+                    <LayersControl.BaseLayer name="Satellite (Esri)">
                         <TileLayer
                             attribution='Tiles &copy; Esri'
                             url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
@@ -97,7 +97,7 @@ export default function AppMap({ regions, selectedSceneUrl, onAoiSubmit }: MapPr
                     </LayersControl.BaseLayer>
                     
                     {/* Базов слой: Хидрография (Дълбочини, релеф на дъното от Esri Ocean) */}
-                    <LayersControl.BaseLayer name="Хидрография (Esri Ocean)">
+                    <LayersControl.BaseLayer name="Hydrography (Esri Ocean)">
                         <TileLayer
                             attribution='Tiles &copy; Esri'
                             url="https://services.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}"
@@ -105,7 +105,7 @@ export default function AppMap({ regions, selectedSceneUrl, onAoiSubmit }: MapPr
                     </LayersControl.BaseLayer>
                     
                     {/* Допълнителен слой (Overlay) над базовия: Морски навигационни маркери */}
-                    <LayersControl.Overlay name="Морски маркери (OpenSeaMap)">
+                    <LayersControl.Overlay name="Nautical Markers (OpenSeaMap)">
                         <TileLayer
                             url="https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png"
                             attribution='Map data: &copy; <a href="http://www.openseamap.org">OpenSeaMap</a> contributors'
@@ -138,21 +138,21 @@ export default function AppMap({ regions, selectedSceneUrl, onAoiSubmit }: MapPr
                                 <h3 className="font-bold text-sm border-b pb-1 mb-2">{region.name}</h3>
                                 <div className="space-y-1.5">
                                     <div className="flex justify-between text-[10px] text-muted-foreground uppercase">
-                                        <span>Тип</span>
+                                        <span>Type</span>
                                         <span className="font-mono">{region.type}</span>
                                     </div>
                                     <div className="mt-2 pt-2 border-t flex flex-col gap-1.5">
                                         <div className="flex justify-between text-xs">
-                                            <span className="text-muted-foreground">Растителност:</span>
-                                            {/* Хардкодирани данни за демонстрация (TODO: свързване с бекенда) */}
+                                            <span className="text-muted-foreground">Vegetation:</span>
+                                            {/* Hardcoded data for demonstration (TODO: connect to backend) */}
                                             <span className="font-medium text-green-600">1,240m²</span>
                                         </div>
                                         <div className="flex justify-between text-xs">
-                                            <span className="text-muted-foreground">Увереност:</span>
+                                            <span className="text-muted-foreground">Confidence:</span>
                                             <span className="font-medium">92%</span>
                                         </div>
                                         <div className="flex justify-between text-xs">
-                                            <span className="text-muted-foreground">Последно сканиран:</span>
+                                            <span className="text-muted-foreground">Last scanned:</span>
                                             <span className="font-medium">2026-04-06</span>
                                         </div>
                                     </div>

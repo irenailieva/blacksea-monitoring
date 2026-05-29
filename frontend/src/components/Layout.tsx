@@ -77,7 +77,7 @@ export default function Layout() {
                             className="shrink-0 md:hidden"
                         >
                             <Menu className="h-5 w-5" />
-                            <span className="sr-only">Превключване на навигационното меню</span>
+                            <span className="sr-only">Toggle navigation menu</span>
                         </Button>
                     </SheetTrigger>
                     <SheetContent side="left">
@@ -100,7 +100,7 @@ export default function Layout() {
                 <div className="flex w-full items-center gap-4 md:ml-auto md:gap-2 lg:gap-4">
                     <div className="ml-auto flex-1 sm:flex-initial">
                         {/* Информационен текст за текущия екип */}
-                        <span className="text-sm text-gray-500 mr-4">Екип: Demo Team</span>
+                        <span className="text-sm text-gray-500 mr-4">Team: Demo Team</span>
                     </div>
                     
                     {/* Падaщо меню за известия */}
@@ -119,11 +119,11 @@ export default function Layout() {
                         </DropdownMenuTrigger>
                         {/* Съдържание на известията */}
                         <DropdownMenuContent align="end" className="w-80">
-                            <DropdownMenuLabel>Известия ({unreadCount})</DropdownMenuLabel>
+                            <DropdownMenuLabel>Notifications ({unreadCount})</DropdownMenuLabel>
                             <DropdownMenuSeparator />
                             <div className="max-h-80 overflow-y-auto">
                                 {notifications.length === 0 ? (
-                                    <div className="p-4 text-center text-xs text-muted-foreground">Няма нови известия</div>
+                                    <div className="p-4 text-center text-xs text-muted-foreground">No new notifications</div>
                                 ) : (
                                     <div className="p-2 flex flex-col gap-1">
                                         {/* Рендиране на всяко едно известие */}
@@ -162,18 +162,18 @@ export default function Layout() {
                                     {/* Ако потребителят няма аватар, показваме първата буква от името му */}
                                     <AvatarFallback>{user?.username?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
                                 </Avatar>
-                                <span className="sr-only">Превключване на потребителското меню</span>
+                                <span className="sr-only">Toggle user menu</span>
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Моят профил</DropdownMenuLabel>
+                            <DropdownMenuLabel>My Profile</DropdownMenuLabel>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem asChild>
-                                <Link to="/settings" className="w-full cursor-pointer">Настройки</Link>
+                                <Link to="/settings" className="w-full cursor-pointer">Settings</Link>
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             {/* Бутон за изход */}
-                            <DropdownMenuItem onClick={logout}>Изход</DropdownMenuItem>
+                            <DropdownMenuItem onClick={logout}>Sign Out</DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>

@@ -157,7 +157,7 @@ export default function AoiDrawTool({ onAoiConfirm }: AoiDrawToolProps) {
                             }}
                         >
                             <Crosshair size={14} />
-                            Анализирай Зона
+                            Analyze Area
                         </button>
                     )}
 
@@ -177,7 +177,7 @@ export default function AoiDrawTool({ onAoiConfirm }: AoiDrawToolProps) {
                             boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
                         }}>
                             <Crosshair size={14} className="animate-pulse" />
-                            Кликнете и плъзнете, за да очертаете зона
+                            Click and drag to draw an area
                             <button onClick={cancelDrawing} style={{ marginLeft: 4, cursor: 'pointer', background: 'none', border: 'none', color: '#6b7280' }}>
                                 <X size={14} />
                             </button>
@@ -199,13 +199,13 @@ export default function AoiDrawTool({ onAoiConfirm }: AoiDrawToolProps) {
                             pointerEvents: 'auto',
                         }}>
                             <div style={{ fontSize: '11px', fontWeight: 600, color: '#374151' }}>
-                                Име на зоната (опционално):
+                                Zone name (optional):
                             </div>
                             <input
                                 type="text"
                                 value={displayName}
                                 onChange={(e) => setDisplayName(e.target.value)}
-                                placeholder="напр. Варненско езеро"
+                                placeholder="e.g. Varna Lake"
                                 style={{
                                     width: '100%',
                                     padding: '4px 8px',
@@ -240,7 +240,7 @@ export default function AoiDrawTool({ onAoiConfirm }: AoiDrawToolProps) {
                                         cursor: 'pointer',
                                     }}
                                 >
-                                    ✓ Анализирай
+                                    ✓ Analyze
                                 </button>
                                 <button
                                     onClick={clearRect}
@@ -258,7 +258,7 @@ export default function AoiDrawTool({ onAoiConfirm }: AoiDrawToolProps) {
                                         cursor: 'pointer',
                                     }}
                                 >
-                                    Отказ
+                                    Cancel
                                 </button>
                             </div>
                         </div>

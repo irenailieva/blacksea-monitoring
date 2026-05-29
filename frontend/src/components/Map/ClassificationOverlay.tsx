@@ -54,7 +54,7 @@ export default function ClassificationOverlay({ url, opacity = 0.8 }: Classifica
                 // Еднократно фокусиране и мащабиране (zoom) на картата към новия слой при зареждане
                 map.fitBounds(leafBounds, { padding: [50, 50], animate: true });
             })
-            .catch(err => console.error("💥 Неуспешно извличане на границите за слоя:", err));
+            .catch(err => console.error("💥 Failed to fetch layer bounds:", err));
 
         // Почистваща функция при демонтиране на компонента
         return () => {

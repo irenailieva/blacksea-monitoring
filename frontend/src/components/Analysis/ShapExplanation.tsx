@@ -52,9 +52,9 @@ export function ShapExplanation({ regionId, sceneId }: ShapExplanationProps) {
             <CardHeader>
                 <div className="flex items-center justify-between">
                     <div>
-                        <CardTitle>Обяснимост на модела (SHAP)</CardTitle>
+                        <CardTitle>Model Explainability (SHAP)</CardTitle>
                         <CardDescription>
-                            Важност на характеристиките за текущата класификация
+                            Feature importance for the current classification
                         </CardDescription>
                     </div>
                     {/* Визуализация на спинър, докато се зареждат данните */}

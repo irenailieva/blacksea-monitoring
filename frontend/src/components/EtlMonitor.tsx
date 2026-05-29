@@ -69,7 +69,7 @@ export function EtlMonitor() {
             // След успешно рестартиране, обновяваме списъка със задачи
             await fetchStatus();
         } catch (err: any) {
-            const detail = err?.response?.data?.detail ?? 'Неуспешно повторно стартиране';
+            const detail = err?.response?.data?.detail ?? 'Failed to retry';
             alert(detail);
         } finally {
             setRetrying(prev => ({ ...prev, [jobId]: false }));
@@ -93,8 +93,8 @@ export function EtlMonitor() {
             <div className="flex items-center justify-between">
                 <span className="text-xs text-muted-foreground">
                     {hasActiveJobs
-                        ? `${jobs.filter(j => isActive(j.status)).length} задача(и) в прогрес…`
-                        : 'Няма активни задачи'}
+                        ? `${jobs.filter(j => isActive(j.status)).length} task(s) in progress…`
+                        : 'No active tasks'}
                 </span>
                 <Button
                     variant="ghost"
@@ -102,7 +102,7 @@ export function EtlMonitor() {
                     className="h-6 w-6"
                     onClick={() => fetchStatus(true)}
                     disabled={refreshing}
-                    title="Опресни"
+                    title="Refresh"
                 >
                     {/* Анимация на въртене (spin), докато се опреснява */}
                     <RefreshCw className={`h-3 w-3 ${refreshing ? 'animate-spin' : ''}`} />
@@ -116,7 +116,7 @@ export function EtlMonitor() {
                 </div>
             ) : jobs.length === 0 ? (
                 <div className="p-4 text-center text-sm text-muted-foreground">
-                    Не са намерени ETL процеси.
+                    No ETL processes found.
                 </div>
             ) : (
                 jobs.map((job) => {
@@ -147,13 +147,13 @@ export function EtlMonitor() {
                                     </span>
                                     {/* Визуализация на времето за стартиране и приключване */}
                                     <span className="text-[10px] text-muted-foreground">
-                                        #{job.id} · Стартирана:{' '}
+                                        #{job.id} · Started:{' '}
                                         {job.started_at
                                             ? parseUTCDate(job.started_at).toLocaleTimeString()
-                                            : 'Н/Д'}
+                                            : 'N/A'}
                                         {job.finished_at && (
                                             <>
-                                                {' '}→ Завършена:{' '}
+                                                {' '}→ Finished:{' '}
                                                 {parseUTCDate(job.finished_at).toLocaleTimeString()}
                                             </>
                                         )}
@@ -201,7 +201,7 @@ export function EtlMonitor() {
                                             )}
                                             <span className="text-[10px] capitalize text-muted-foreground">
                                                 {job.status === 'pending'
-                                                    ? 'На опашката — изчаква старт'
+                                                    ? 'Queued — waiting to start'
                                                     : job.status}
                                             </span>
                                         </div>
@@ -219,8 +219,8 @@ export function EtlMonitor() {
                                         <AlertCircle className="h-3 w-3 text-destructive shrink-0" />
                                         <span className="text-[10px] text-destructive truncate">
                                             {job.job_type === 'manual_upload' && job.payload?.file_path
-                                                ? `Файл: ${job.payload.file_path.split('/').pop()}`
-                                                : 'Грешка в процеса — проверете логовете'}
+                                                ? `File: ${job.payload.file_path.split('/').pop()}`
+                                                : 'Pipeline error — check the logs'}
                                         </span>
                                     </div>
                                     <Button
@@ -229,11 +229,11 @@ export function EtlMonitor() {
                                         className="h-5 px-2 text-[10px] shrink-0 border-destructive/40 hover:bg-destructive/10"
                                         disabled={retrying[job.id]}
                                         onClick={() => retryJob(job.id)}
-                                        title="Повтори задачата"
+                                        title="Retry task"
                                     >
                                         {retrying[job.id]
                                             ? <Loader2 className="h-2.5 w-2.5 animate-spin" />
-                                            : <><RotateCcw className="h-2.5 w-2.5 mr-1" />Опитай пак</>
+                                            : <><RotateCcw className="h-2.5 w-2.5 mr-1" />Retry</>
                                         }
                                     </Button>
                                 </div>

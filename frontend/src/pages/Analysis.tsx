@@ -126,12 +126,12 @@ export default function Analysis() {
         <div className="flex flex-col space-y-4 h-full overflow-y-auto pr-2">
             {/* Горен панел: Заглавие, избор на регион и бутон за експорт */}
             <div className="flex items-center justify-between space-y-2 p-1">
-                <h2 className="text-3xl font-bold tracking-tight">Табло за Анализи</h2>
+                <h2 className="text-3xl font-bold tracking-tight">Analysis Dashboard</h2>
                 <div className="flex items-center space-x-2">
                     {/* Падащо меню (Select) за избор на регион */}
                     <Select value={selectedRegion} onValueChange={setSelectedRegion}>
                         <SelectTrigger className="w-[180px]">
-                            <SelectValue placeholder="Изберете регион" />
+                            <SelectValue placeholder="Select region" />
                         </SelectTrigger>
                         <SelectContent>
                             {regions.map(region => (
@@ -142,7 +142,7 @@ export default function Analysis() {
                         </SelectContent>
                     </Select>
                     {/* Бутон за изтегляне на CSV */}
-                    <Button size="icon" variant="outline" onClick={exportAnalysisCSV} title="Експортиране в CSV">
+                    <Button size="icon" variant="outline" onClick={exportAnalysisCSV} title="Export to CSV">
                         <Download className="h-4 w-4" />
                     </Button>
                 </div>
@@ -153,12 +153,12 @@ export default function Analysis() {
                 {/* Карточка 1: Площ */}
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Обща площ на растителността</CardTitle>
+                        <CardTitle className="text-sm font-medium">Total Vegetation Area</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{(stats.total_vegetation_area_m2 / 1_000_000).toLocaleString(undefined, { maximumFractionDigits: 2 })} km²</div>
                         <p className="text-xs text-muted-foreground">
-                            {stats.vegetation_trend_percent > 0 ? '+' : ''}{stats.vegetation_trend_percent}% спрямо предишна сцена
+                            {stats.vegetation_trend_percent > 0 ? '+' : ''}{stats.vegetation_trend_percent}% vs. previous scene
                         </p>
                     </CardContent>
                 </Card>
@@ -166,12 +166,12 @@ export default function Analysis() {
                 {/* Карточка 2: Увереност */}
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Ср. увереност (Confidence)</CardTitle>
+                        <CardTitle className="text-sm font-medium">Avg. Confidence</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{stats.avg_confidence}%</div>
                         <p className="text-xs text-muted-foreground">
-                            {stats.confidence_trend_percent > 0 ? '+' : ''}{stats.confidence_trend_percent}% спрямо предишна сцена
+                            {stats.confidence_trend_percent > 0 ? '+' : ''}{stats.confidence_trend_percent}% vs. previous scene
                         </p>
                     </CardContent>
                 </Card>
@@ -179,12 +179,12 @@ export default function Analysis() {
                 {/* Карточка 3: Аномалии */}
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Активни аномалии</CardTitle>
+                        <CardTitle className="text-sm font-medium">Active Anomalies</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{stats.active_anomalies}</div>
                         <p className="text-xs text-muted-foreground">
-                            {stats.anomalies_trend > 0 ? '+' : ''}{stats.anomalies_trend} нови аномалии
+                            {stats.anomalies_trend > 0 ? '+' : ''}{stats.anomalies_trend} new anomalies
                         </p>
                     </CardContent>
                 </Card>

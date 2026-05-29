@@ -51,9 +51,9 @@ export function VegetationChart({ regionId }: VegetationChartProps) {
             <CardHeader>
                 <div className="flex items-center justify-between">
                     <div>
-                        <CardTitle>Тенденции в растителността</CardTitle>
+                        <CardTitle>Vegetation Trends</CardTitle>
                         <CardDescription>
-                            Площно покритие (km²) във времето
+                            Area coverage (km²) over time
                         </CardDescription>
                     </div>
                     {/* Индикатор за зареждане */}
@@ -105,7 +105,7 @@ export function VegetationChart({ regionId }: VegetationChartProps) {
                             <Line
                                 type="monotone"
                                 dataKey="vegetation"
-                                name="Растителност (km²)"
+                                name="Vegetation (km²)"
                                 stroke="#16a34a"
                                 strokeWidth={2}
                                 dot={{ r: 3, fill: '#16a34a' }}
@@ -115,7 +115,7 @@ export function VegetationChart({ regionId }: VegetationChartProps) {
                             <Line
                                 type="monotone"
                                 dataKey="sand"
-                                name="Пясък/Абиотични (km²)"
+                                name="Sand/Abiotic (km²)"
                                 stroke="#eab308"
                                 strokeWidth={2}
                                 dot={{ r: 3, fill: '#eab308' }}
@@ -125,7 +125,7 @@ export function VegetationChart({ regionId }: VegetationChartProps) {
                             <Line
                                 type="monotone"
                                 dataKey="water"
-                                name="Вода (km²)"
+                                name="Water (km²)"
                                 stroke="#0ea5e9"
                                 strokeWidth={2}
                                 dot={{ r: 3, fill: '#0ea5e9' }}

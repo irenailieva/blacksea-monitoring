@@ -61,23 +61,23 @@ export default function TeamManagement() {
                 {/* Горен панел: Заглавие и бутон за добавяне */}
                 <div className="flex items-center justify-between p-1">
                     <div>
-                        <h2 className="text-3xl font-bold tracking-tight">Управление на екипа</h2>
+                        <h2 className="text-3xl font-bold tracking-tight">Team Management</h2>
                         <p className="text-muted-foreground text-sm mt-1">
-                            Управлявайте членовете на проекта, ролите и правата за достъп.
+                            Manage project members, roles, and access permissions.
                         </p>
                     </div>
                     <Button>
                         <UserPlus className="mr-2 h-4 w-4" />
-                        Покани член
+                        Invite member
                     </Button>
                 </div>
 
                 {/* Основна карта с таблица */}
                 <Card>
                     <CardHeader>
-                        <CardTitle>Членове на организацията</CardTitle>
+                        <CardTitle>Organization Members</CardTitle>
                         <CardDescription>
-                            Списък на всички потребители във вашата организация и техните роли в проекта.
+                            A list of all users in your organization and their project roles.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -85,10 +85,10 @@ export default function TeamManagement() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Потребител</TableHead>
-                                    <TableHead>Роля</TableHead>
-                                    <TableHead>Статус</TableHead>
-                                    <TableHead className="text-right">Действия</TableHead>
+                                    <TableHead>User</TableHead>
+                                    <TableHead>Role</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -113,7 +113,7 @@ export default function TeamManagement() {
                                         <TableCell>
                                             {/* Статичен етикет "Активен" (в реално приложение се взима от бекенда) */}
                                             <Badge variant="default">
-                                                активен
+                                                active
                                             </Badge>
                                         </TableCell>
                                         <TableCell className="text-right">
@@ -125,12 +125,12 @@ export default function TeamManagement() {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
-                                                    <DropdownMenuLabel>Действия</DropdownMenuLabel>
-                                                    <DropdownMenuItem>Редактирай роля</DropdownMenuItem>
-                                                    <DropdownMenuItem>Преглед на активност</DropdownMenuItem>
+                                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                    <DropdownMenuItem>Edit role</DropdownMenuItem>
+                                                    <DropdownMenuItem>View activity</DropdownMenuItem>
                                                     <DropdownMenuSeparator />
                                                     <DropdownMenuItem className="text-destructive">
-                                                        Премахни от екипа
+                                                        Remove from team
                                                     </DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
