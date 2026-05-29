@@ -56,18 +56,33 @@ def prepare_features(blue: np.ndarray, green: np.ndarray, red: np.ndarray, nir: 
         Двумерна матрица с форма (брой_примери, 6)
     """
     # 🌡️ Автоматична калибрация на входа (Auto-Intake Calibration)
-    # ML моделите са обучени върху "сурови" стойности (Raw DN), които 
-    # за Sentinel-2 обикновено са в диапазона 0-10000.
-    # Ако подаденият масив вече е скалиран (напр. от 0.0 до 1.0 като отражателна способност),
-    # ние трябва да го умножим по 10000, за да съвпадне с разпределението, на което е учен моделът.
+    # ML моделите са обучени върху „сурови" стойности (Raw DN) в диапазон 0-10000.
+    #
+    # odc.stac зарежда Sentinel-2 L2A данни (ESA Processing Baseline 4.0+) с автоматично
+    # приложен BOA offset: reflectance = DN * 0.0001 + (-0.1)
+    # Тоест тъмните пиксели (вода, сенки) с DN~700 получават: 700*0.0001 - 0.1 = -0.03
+    # (отрицателна стойност!), а след умножение по 10000 стават -300 — напълно извън
+    # разпределението, на което е учен моделът.
+    #
+    # Решение: ако данните изглеждат скалирани (max <= 2.0), те са BOA reflectance.
+    # Добавяме обратно BOA_ADD_OFFSET (+0.1) преди умножението, за да се върнат
+    # в диапазона на DN стойностите, очаквани от модела.
+    BOA_ADD_OFFSET = 0.1   # ESA Sentinel-2 L2A Processing Baseline 4.0+ offset (-0.1 applied by odc.stac)
     data_max = np.nanmax(blue)
-    scale_factor = 10000.0 if data_max <= 2.0 else 1.0
-    
-    # Прилагане на калибриращия фактор
-    b2_scaled = blue * scale_factor
-    b3_scaled = green * scale_factor
-    b4_scaled = red * scale_factor
-    b8_scaled = nir * scale_factor
+
+    if data_max <= 2.0:
+        # Данните са BOA reflectance с вграден offset — обръщаме го и скалираме до DN
+        scale_factor = 10000.0
+        b2_scaled = (blue  + BOA_ADD_OFFSET) * scale_factor
+        b3_scaled = (green + BOA_ADD_OFFSET) * scale_factor
+        b4_scaled = (red   + BOA_ADD_OFFSET) * scale_factor
+        b8_scaled = (nir   + BOA_ADD_OFFSET) * scale_factor
+    else:
+        # Данните вече са в DN диапазон (0-10000) — използваме директно
+        b2_scaled = blue
+        b3_scaled = green
+        b4_scaled = red
+        b8_scaled = nir
 
     # Изчисляване на индексите върху вече калибрираните данни
     ndvi = calculate_ndvi(b8_scaled, b4_scaled)
