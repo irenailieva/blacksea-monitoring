@@ -140,11 +140,12 @@ def read_scenes(
     from app.models.scene import Scene
     
     print(f"[DEBUG] Fetching scenes for user {current_user.username}, region_id={region_id}")
-    
-    # Филтрираме заявката, така че да показва само сцени, за които вече има генерирани резултати 
-    # от класификацията (classification_results.any()).
-    query = db.query(Scene).filter(Scene.classification_results.any())
-    
+
+    # Връщаме всички сцени — не филтрираме по classification_results,
+    # защото сцените трябва да се показват в списъка веднага след приключване на ETL,
+    # независимо дали ML е генерирал статистика.
+    query = db.query(Scene)
+
     # Ако е предоставен region_id, добавяме допълнителен WHERE филтър.
     if region_id:
         query = query.filter(Scene.region_id == region_id)

@@ -48,14 +48,16 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"[Lifespan] Error seeding regions: {e}")
 
-    # Проверка и добавяне на колона 'display_name' в таблицата 'scenes', ако липсва.
+    # Проверка и добавяне на колони, ако липсват (idempotent schema migrations).
     from sqlalchemy import text
     try:
         with engine.begin() as conn:
             conn.execute(text("ALTER TABLE scenes ADD COLUMN IF NOT EXISTS display_name VARCHAR(100);"))
-        print("[Lifespan] Added display_name column to scenes table if it did not exist.")
+            conn.execute(text("ALTER TABLE classification_results ADD COLUMN IF NOT EXISTS area_m2 DOUBLE PRECISION;"))
+        print("[Lifespan] Schema migrations applied (display_name, classification_results.area_m2).")
     except Exception as e:
-        print(f"[Lifespan] Error checking/adding display_name column: {e}")
+        print(f"[Lifespan] Error applying schema migrations: {e}")
+
 
     # Почистване на стари ETL (Extract, Transform, Load) задачи, които са останали "висящи" при евентуален срив.
     db = SessionLocal()
