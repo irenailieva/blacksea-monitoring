@@ -39,7 +39,7 @@ export function ShapExplanation({ regionId, sceneId }: ShapExplanationProps) {
                 });
                 setShapData(response.data);
             } catch (error) {
-                console.error('Неуспешно извличане на SHAP стойности:', error);
+                console.error('Failed to fetch SHAP values:', error);
             } finally {
                 setLoading(false);
             }

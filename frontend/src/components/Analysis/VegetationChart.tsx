@@ -37,7 +37,7 @@ export function VegetationChart({ regionId }: VegetationChartProps) {
                 });
                 setTrendData(response.data);
             } catch (error) {
-                console.error('Неуспешно извличане на тенденциите за растителност:', error);
+                console.error('Failed to fetch vegetation trends:', error);
             } finally {
                 setLoading(false);
             }

@@ -39,7 +39,7 @@ export function SceneAnalysis({ scene }: SceneAnalysisProps) {
                 // Записваме получените данни в състоянието
                 setStats(response.data);
             } catch (error) {
-                console.error('Неуспешно извличане на статистика за сцената:', error);
+                console.error('Failed to fetch scene statistics:', error);
             } finally {
                 setLoading(false); // Деактивираме индикатора за зареждане
             }
@@ -63,13 +63,13 @@ export function SceneAnalysis({ scene }: SceneAnalysisProps) {
             {/* Карточка 1: Обща площ на растителността */}
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Обща площ на растителността</CardTitle>
+                    <CardTitle className="text-sm font-medium">Total Vegetation Area</CardTitle>
                 </CardHeader>
                 <CardContent>
                     {/* Конвертираме квадратни метри в квадратни километри и форматираме числото */}
                     <div className="text-2xl font-bold">{(stats.total_vegetation_area_m2 / 1_000_000).toLocaleString(undefined, { maximumFractionDigits: 2 })} km²</div>
                     <p className="text-xs text-muted-foreground">
-                        {stats.vegetation_trend_percent > 0 ? '+' : ''}{stats.vegetation_trend_percent}% спрямо предходната сцена
+                        {stats.vegetation_trend_percent > 0 ? '+' : ''}{stats.vegetation_trend_percent}% vs previous scene
                     </p>
                 </CardContent>
             </Card>
@@ -77,12 +77,12 @@ export function SceneAnalysis({ scene }: SceneAnalysisProps) {
             {/* Карточка 2: Средна увереност на модела */}
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Ср. увереност (Confidence)</CardTitle>
+                    <CardTitle className="text-sm font-medium">Avg. Confidence</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">{stats.avg_confidence}%</div>
                     <p className="text-xs text-muted-foreground">
-                        {stats.confidence_trend_percent > 0 ? '+' : ''}{stats.confidence_trend_percent}% спрямо предходната сцена
+                        {stats.confidence_trend_percent > 0 ? '+' : ''}{stats.confidence_trend_percent}% vs previous scene
                     </p>
                 </CardContent>
             </Card>
@@ -90,12 +90,12 @@ export function SceneAnalysis({ scene }: SceneAnalysisProps) {
             {/* Карточка 3: Активни аномалии */}
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Активни аномалии</CardTitle>
+                    <CardTitle className="text-sm font-medium">Active Anomalies</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">{stats.active_anomalies}</div>
                     <p className="text-xs text-muted-foreground">
-                        {stats.anomalies_trend > 0 ? '+' : ''}{stats.anomalies_trend} нови аномалии
+                        {stats.anomalies_trend > 0 ? '+' : ''}{stats.anomalies_trend} new anomalies
                     </p>
                 </CardContent>
             </Card>

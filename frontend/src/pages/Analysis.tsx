@@ -55,7 +55,7 @@ export default function Analysis() {
                     setSelectedRegion(firstWithData.id.toString());
                 }
             } catch (error) {
-                console.error('Неуспешно извличане на регионите:', error);
+                console.error('Failed to fetch regions:', error);
             } finally {
                 setLoading(false);
             }
@@ -75,7 +75,7 @@ export default function Analysis() {
                 });
                 setStats(response.data);
             } catch (error) {
-                console.error('Неуспешно извличане на статистика:', error);
+                console.error('Failed to fetch statistics:', error);
             }
         };
         fetchStats();
@@ -93,16 +93,16 @@ export default function Analysis() {
     // Функция за генериране и изтегляне на CSV файл с аналитичния репорт
     const exportAnalysisCSV = () => {
         // Намиране на името на текущо избрания регион
-        const regionName = regions.find(r => r.id.toString() === selectedRegion)?.name || 'Неизвестен регион';
+        const regionName = regions.find(r => r.id.toString() === selectedRegion)?.name || 'Unknown region';
         
         // Дефиниране на заглавките на CSV файла
-        const headers = ["Регион", "Метрика", "Стойност", "Тенденция"];
+        const headers = ["Region", "Metric", "Value", "Trend"];
         
         // Подготовка на редовете с данни
         const rows = [
-            [regionName, "Обща площ растителност (km²)", (stats.total_vegetation_area_m2 / 1_000_000).toFixed(2), `${stats.vegetation_trend_percent > 0 ? '+' : ''}${stats.vegetation_trend_percent}%`],
-            [regionName, "Средна увереност на модела (%)", stats.avg_confidence.toString(), `${stats.confidence_trend_percent > 0 ? '+' : ''}${stats.confidence_trend_percent}%`],
-            [regionName, "Активни аномалии", stats.active_anomalies.toString(), `${stats.anomalies_trend > 0 ? '+' : ''}${stats.anomalies_trend}`]
+            [regionName, "Total vegetation area (km²)", (stats.total_vegetation_area_m2 / 1_000_000).toFixed(2), `${stats.vegetation_trend_percent > 0 ? '+' : ''}${stats.vegetation_trend_percent}%`],
+            [regionName, "Average model confidence (%)", stats.avg_confidence.toString(), `${stats.confidence_trend_percent > 0 ? '+' : ''}${stats.confidence_trend_percent}%`],
+            [regionName, "Active anomalies", stats.active_anomalies.toString(), `${stats.anomalies_trend > 0 ? '+' : ''}${stats.anomalies_trend}`]
         ];
         
         // Сглобяване на CSV съдържанието

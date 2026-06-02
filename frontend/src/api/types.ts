@@ -26,12 +26,16 @@ export interface Team {
  * Географски интерфейси (Geography & Map Interfaces)
  */
 
-// Представя Зона на интерес (Area of Interest - AOI) или географски регион
+// Represents a geographic Area of Interest (AOI) or monitored region
 export interface Region {
     id: number;
-    name: string; // Име на региона (напр. "Варненски залив")
-    geometry: GeoJSON.Polygon; // Геометрични координати във формат GeoJSON
-    type: 'aoi'; // Тип на обекта
+    name: string;
+    description?: string;
+    area_km2?: number;
+    type?: string;
+    geometry?: GeoJSON.Polygon;
+    created_at?: string;
+    updated_at?: string;
 }
 
 /**

@@ -56,7 +56,7 @@ export default function Dashboard() {
                 // Ако има налични сцени, избираме първата автоматично
                 if (scenesRes.data.length > 0) setSelectedScene(scenesRes.data[0]);
             } catch (e) {
-                console.error('Неуспешно зареждане на началните данни:', e);
+                console.error('Failed to load initial data:', e);
             } finally {
                 setLoading(false);
             }
@@ -75,7 +75,7 @@ export default function Dashboard() {
             setScenes(res.data);
             return res.data;
         } catch (e) {
-            console.error('Неуспешно опресняване на сцените:', e);
+            console.error('Failed to refresh scenes:', e);
             return [];
         } finally {
             setRefreshing(false);
@@ -130,7 +130,7 @@ export default function Dashboard() {
                 if (job.status === 'failed') {
                     clearInterval(interval);
                 }
-            } catch {/* Игнорираме мълчаливо мрежови грешки при polling-а */}
+            } catch {/* Silently ignore network errors during polling */}
         }, 3000);
 
         // Почистване на интервала при демонтиране или промяна в зависимостите
@@ -162,8 +162,8 @@ export default function Dashboard() {
                 progress: 0,
             });
         } catch (e: any) {
-            console.error('Неуспешно стартиране на AOI анализ:', e);
-            alert(e?.response?.data?.detail ?? 'Неуспешно стартиране на анализа. Проверете вашите права.');
+            console.error('Failed to start AOI analysis:', e);
+            alert(e?.response?.data?.detail ?? 'Failed to start analysis. Check your permissions.');
         }
     }, []);
 
