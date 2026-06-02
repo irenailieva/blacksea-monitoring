@@ -40,7 +40,7 @@
     "avg_code_lines": 0.0
   },
   {
-    "title": "1.2.5. Таблица regions (Зони, представляващи интерес)",
+    "title": "1.2.5. Таблица regions (Региони)",
     "code_block_count": 0,
     "avg_code_lines": 0.0
   },
@@ -85,16 +85,6 @@
     "avg_code_lines": 0.0
   },
   {
-    "title": "2.1. Значение на NDVI и NDWI за акватичния мониторинг",
-    "code_block_count": 0,
-    "avg_code_lines": 0.0
-  },
-  {
-    "title": "2.2. Използване на SAVI и FAI за прецизна детекция",
-    "code_block_count": 0,
-    "avg_code_lines": 0.0
-  },
-  {
     "title": "3. Оптимизация на производителността за големи данни (Big Data)",
     "code_block_count": 0,
     "avg_code_lines": 0.0
@@ -135,6 +125,26 @@
     "avg_code_lines": 0.0
   },
   {
+    "title": "1. Сървърна част / Backend (`backend/app/`)",
+    "code_block_count": 0,
+    "avg_code_lines": 0.0
+  },
+  {
+    "title": "2. Машинно обучение / Machine Learning (`ml/`)",
+    "code_block_count": 0,
+    "avg_code_lines": 0.0
+  },
+  {
+    "title": "3. ETL работен поток (`etl/`)",
+    "code_block_count": 0,
+    "avg_code_lines": 0.0
+  },
+  {
+    "title": "4. Потребителски интерфейс / Frontend (`frontend/src/`)",
+    "code_block_count": 0,
+    "avg_code_lines": 0.0
+  },
+  {
     "title": "2. Реализация на ETL модула",
     "code_block_count": 0,
     "avg_code_lines": 0.0
@@ -142,16 +152,16 @@
   {
     "title": "2.1. Извличане на данни и базова предварителна обработка",
     "code_block_count": 2,
-    "avg_code_lines": 2.5
+    "avg_code_lines": 1.0
   },
   {
     "title": "2.2. Оптимизация на процеса чрез Rasterio и NumPy",
     "code_block_count": 2,
-    "avg_code_lines": 1.5
+    "avg_code_lines": 1.0
   },
   {
     "title": "2.3. Интеграция на метаданните в PostGIS",
-    "code_block_count": 2,
+    "code_block_count": 1,
     "avg_code_lines": 1.0
   },
   {
@@ -166,32 +176,32 @@
   },
   {
     "title": "3.1 Роля на алгоритмите в ансамбъла",
-    "code_block_count": 1,
-    "avg_code_lines": 1.0
+    "code_block_count": 0,
+    "avg_code_lines": 0.0
   },
   {
     "title": "2.  XGBoost: Прилага последователно обучение (Boosting).",
-    "code_block_count": 1,
-    "avg_code_lines": 1.0
+    "code_block_count": 0,
+    "avg_code_lines": 0.0
   },
   {
     "title": "3.  LightGBM: Оптимизиран за скорост чрез leaf-wise растеж.",
-    "code_block_count": 1,
-    "avg_code_lines": 1.0
+    "code_block_count": 0,
+    "avg_code_lines": 0.0
   },
   {
     "title": "3.2. Стратегия за обучение и гласуване (Soft Voting)",
-    "code_block_count": 4,
-    "avg_code_lines": 1.25
+    "code_block_count": 3,
+    "avg_code_lines": 1.3333333333333333
   },
   {
     "title": "3.3. Обяснима интелигентност чрез SHAP",
-    "code_block_count": 1,
-    "avg_code_lines": 1.0
+    "code_block_count": 0,
+    "avg_code_lines": 0.0
   },
   {
     "title": "3.4. Компонентна архитектура с FastAPI",
-    "code_block_count": 2,
+    "code_block_count": 1,
     "avg_code_lines": 1.0
   },
   {
@@ -210,12 +220,12 @@
     "avg_code_lines": 0.0
   },
   {
-    "title": "4.2.1. useAuth хранилище",
+    "title": "4.2.1. Хранилище useAuth",
     "code_block_count": 0,
     "avg_code_lines": 0.0
   },
   {
-    "title": "4.2.2. useNotifications хранилище",
+    "title": "4.2.2. Хранилище useNotifications",
     "code_block_count": 0,
     "avg_code_lines": 0.0
   },
@@ -242,11 +252,11 @@
   {
     "title": "4.7. Екран за анализ и визуализация на данни",
     "code_block_count": 2,
-    "avg_code_lines": 2.0
+    "avg_code_lines": 1.5
   },
   {
     "title": "4.8. Главен екран – интеграция на картата и страничния панел",
-    "code_block_count": 4,
-    "avg_code_lines": 1.75
+    "code_block_count": 3,
+    "avg_code_lines": 1.3333333333333333
   }
 ]

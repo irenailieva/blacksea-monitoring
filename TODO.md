@@ -5,6 +5,12 @@
 - [x] **Team Management** — Team management/interaction must be fully implemented and functional.
 - [x] **Region CRUD (Admin)** — Region CRUD operations using the Admin account must be fully implemented and functional.
 
+- [x] Data page: Auto ETL job completion percentage value must be rounded to integer.
+- [ ] Map Page: Auto ETL job resulting in questionable classification overlay (large area of blue pixels over land)
+- [x] Data page: Data screen container must fit into standard 16:10 and 16:9 desktop viewports (currently slightly taller).
+- [x] Analysis page: SHAP contribution diagram must display index values as integer percentages instead of floating-point numbers.
+
+
 ## Final Tasks Before Completion
 
 - [ ] App: Classification and Statistical Analysis must work correctly at all costs before finalizing

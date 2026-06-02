@@ -180,7 +180,7 @@ export function EtlMonitor() {
                             {(active || job.status === 'completed') && (
                                 <div className="space-y-1">
                                     <Progress
-                                        value={job.status === 'completed' ? 100 : progress}
+                                        value={job.status === 'completed' ? 100 : Math.round(progress)}
                                         className="h-1.5"
                                     />
                                     <div className="flex justify-between items-center">
@@ -206,7 +206,7 @@ export function EtlMonitor() {
                                             </span>
                                         </div>
                                         <span className="text-[10px] text-muted-foreground">
-                                            {job.status === 'completed' ? 100 : progress}%
+                                            {job.status === 'completed' ? 100 : Math.round(progress)}%
                                         </span>
                                     </div>
                                 </div>

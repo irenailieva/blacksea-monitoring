@@ -1,7 +1,7 @@
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Cell } from "recharts"
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Cell, LabelList } from "recharts"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import api from '@/api/axios';
 import { Loader2 } from 'lucide-react';
 
@@ -47,6 +47,18 @@ export function ShapExplanation({ regionId, sceneId }: ShapExplanationProps) {
         fetchShap();
     }, [regionId, sceneId]); // Ефектът се задейства при промяна на ID-то
 
+    // Нормализиране на SHAP стойностите до процентни стойности (сума от абсолютните = 100%)
+    // и закръгляне до цели числа за по-чист визуален изглед
+    const chartData = useMemo(() => {
+        if (shapData.length === 0) return [];
+        const totalAbsolute = shapData.reduce((sum, d) => sum + Math.abs(d.value), 0);
+        if (totalAbsolute === 0) return shapData.map(d => ({ ...d, value: 0 }));
+        return shapData.map(d => ({
+            ...d,
+            value: Math.round((d.value / totalAbsolute) * 100),
+        }));
+    }, [shapData]);
+
     return (
         <Card className="col-span-1 lg:col-span-1">
             <CardHeader>
@@ -66,9 +78,15 @@ export function ShapExplanation({ regionId, sceneId }: ShapExplanationProps) {
                     {/* Контейнер, който автоматично оразмерява графиката */}
                     <ResponsiveContainer width="100%" height="100%">
                         {/* Хоризонтална лентова графика (BarChart) */}
-                        <BarChart data={shapData} layout="vertical" margin={{ top: 0, right: 0, left: 40, bottom: 0 }}>
-                            {/* Скрита X-ос (тъй като е хоризонтална графика) */}
-                            <XAxis type="number" hide />
+                        <BarChart data={chartData} layout="vertical" margin={{ top: 0, right: 40, left: 40, bottom: 0 }}>
+                            {/* X-оста показва процентните стойности като цели числа */}
+                            <XAxis
+                                type="number"
+                                tickFormatter={(v: number) => `${Math.round(v)}%`}
+                                tick={{ fontSize: 11 }}
+                                axisLine={false}
+                                tickLine={false}
+                            />
                             {/* Y-оста показва имената на характеристиките */}
                             <YAxis
                                 dataKey="feature"
@@ -78,14 +96,22 @@ export function ShapExplanation({ regionId, sceneId }: ShapExplanationProps) {
                                 tickLine={false}
                                 axisLine={false}
                             />
-                            {/* Tooltip (подсказка) при посочване с мишката */}
+                            {/* Tooltip (подсказка) при посочване с мишката — стойности като цели проценти */}
                             <Tooltip
                                 cursor={{ fill: 'transparent' }}
                                 contentStyle={{ backgroundColor: 'white', borderRadius: '8px', border: '1px solid #e5e7eb' }}
+                                formatter={(value: number) => [`${Math.round(value)}%`, 'Contribution']}
                             />
                             {/* Дефиниране на самите ленти (Bars) */}
                             <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                                {shapData.map((entry, index) => (
+                                {/* Етикети върху всяка лента с процентната стойност */}
+                                <LabelList
+                                    dataKey="value"
+                                    position="right"
+                                    formatter={(v: number) => `${Math.round(v)}%`}
+                                    style={{ fontSize: 11, fill: '#6b7280' }}
+                                />
+                                {chartData.map((entry, index) => (
                                     // Оцветяване според стойността: зелено за положително влияние, червено за отрицателно
                                     <Cell key={`cell-${index}`} fill={entry.value > 0 ? "#16a34a" : "#ef4444"} />
                                 ))}
