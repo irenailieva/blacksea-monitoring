@@ -299,6 +299,8 @@ def run_pipeline(job_id=None, bbox=None, aoi_name=None, cloud_max=None, display_
                     # Извличане на SHAP стойности (ако са достъпни)
                     shap_data = []
                     try:
+                        # Извличане на глобални feature importances от ML модела
+                        # Стойностите на признаците се използват само за predict_one() вътре в explain_one()
                         exp_resp = requests.post(f"{ml_url}/explain", json={"features": [0.1, 0.1, 0.1, 0.1, 0.1, 0.1]})
                         if exp_resp.status_code == 200:
                             shap_data = exp_resp.json().get("contributions", [])

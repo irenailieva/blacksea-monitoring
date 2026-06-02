@@ -88,21 +88,52 @@ class WaterQualityModel:
         # Мапване на всички резултати към 10, 20 или 30
         return [float(self.mapping.get(p, 30)) for p in preds]
 
+    def predict_batch_with_confidence(self, X):
+        """
+        Предсказва класовете и извлича реалната увереност (confidence) на модела.
+        За всеки пиксел увереността е максималната усреднена вероятност от трите модела.
+        Връща две стойности: списък с предсказания и масив с увереност (0-100%).
+        """
+        X = np.array(X, dtype=float)
+        if X.ndim != 2 or X.shape[1] != self.n_features:
+            raise ValueError(f"Очаква се 2D масив с {self.n_features} признака.")
+        
+        # Извличане на вероятностите от всеки модел
+        prob1 = self.rf.predict_proba(X)
+        prob2 = self.xgb.predict_proba(X)
+        prob3 = self.lgb.predict_proba(X)
+        
+        # Усредняване на вероятностите (Soft Voting)
+        avg_prob = (prob1 + prob2 + prob3) / 3.0
+        
+        # Предсказан клас = argmax на усреднените вероятности
+        preds = np.argmax(avg_prob, axis=1)
+        # Увереност = максималната вероятност за избрания клас (в проценти 0-100)
+        confidences = np.max(avg_prob, axis=1) * 100.0
+        
+        # Мапване на класовете (0→10, 1→20, 2→30)
+        mapped = np.array([float(self.mapping.get(p, 30)) for p in preds])
+        return mapped, confidences
+
     def explain_one(self, x):
         """
-        Генерира обяснение (feature importance) за един пиксел чрез SHAP стойности.
-        За целите на демонстрацията генерира полуреални стойности, базирани на базово 
-        значение (NDVI и NIR обикновено са най-важни).
-        В реална среда тук се извиква библиотеката shap.
+        Генерира обяснение (feature importance) чрез реалните стойности на
+        значимост на признаците (feature_importances_) от обучените модели.
+        Използва усредненото значение от трите модела (RF, XGBoost, LightGBM).
+        
+        Признаци: [B2 (Син), B3 (Зелен), B4 (Червен), B8 (NIR), NDVI, NDWI]
         """
-        import random
-        # Базова значимост на признаците: [B2, B3, B4, B8, NDVI, NDWI]
-        base_importance = [0.1, 0.1, 0.1, 0.2, 0.35, 0.15] 
-        # Добавяне на малка случайност, за да изглеждат резултатите динамични
-        contrib = [v + random.uniform(-0.02, 0.02) for v in base_importance]
+        # Извличане на значимостта на признаците от всеки обучен модел
+        rf_imp = self.rf.feature_importances_
+        xgb_imp = self.xgb.feature_importances_
+        lgb_imp = self.lgb.feature_importances_
+        
+        # Усредняване на значимостите от трите модела
+        avg_imp = (rf_imp + xgb_imp + lgb_imp) / 3.0
+        
         yhat = self.predict_one(x)
-        # Връща приноса, базовата стойност (bias) и самото предсказание
-        return contrib, 0.0, yhat
+        # Връща реалните значимости, базовата стойност (bias) и предсказването
+        return avg_imp.tolist(), 0.0, yhat
 
 def load_model(artifact_dir: Path) -> WaterQualityModel:
     """

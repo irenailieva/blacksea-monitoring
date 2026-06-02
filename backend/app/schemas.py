@@ -263,7 +263,7 @@ class ShapValueRead(ShapValueBase):
 
 class ClassificationResultBase(BaseSchema):
     label: str = Field(..., max_length=100)
-    confidence: Optional[float] = Field(None, ge=0, le=1)
+    confidence: Optional[float] = Field(None, ge=0, le=100)
 
 
 class ClassificationResultCreate(ClassificationResultBase):

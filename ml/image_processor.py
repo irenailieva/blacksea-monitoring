@@ -42,6 +42,7 @@ def process_scene(band_paths: dict, output_path: str, model):
     
     if is_single_file:
         print(f"🔄 Обработка на единичен ръчно качен файл...")
+        all_confidences = []  # Натрупване на увереностите от всички блокове
         with rasterio.open(b2_path) as src:
             # Копираме профила на изходното изображение и го настройваме за резултата
             profile = src.profile.copy()
@@ -82,22 +83,27 @@ def process_scene(band_paths: dict, output_path: str, model):
                     X_water = prepare_features(b2_water, b3_water, b4_water, b8_water)
                     
                     if len(X_water) > 0:
-                        # Предсказване на класовете за пикселите
-                        mapped_pred = model.predict_batch(X_water)
+                        # Предсказване на класовете и реалната увереност на модела
+                        mapped_pred, conf_batch = model.predict_batch_with_confidence(X_water)
                         # Записваме резултата в съответните валидни пиксели на блока
                         result_block[target_mask] = mapped_pred
+                        # Натрупване на увереностите за изчисляване на средната стойност
+                        all_confidences.extend(conf_batch.tolist())
                         
                     # Записваме обработения блок във файла
                     dst.write(result_block, 1, window=window)
                     print(".", end="", flush=True)
 
+        # Изчисляване на средната увереност от всички обработени пиксели
+        single_avg_conf = sum(all_confidences) / len(all_confidences) if all_confidences else 0.0
         print(f"\n🎉 Единичният файл е генериран успешно: {output_path}")
         # 🔥 ГЕНЕРИРАНЕ НА PNG ИЗОБРАЖЕНИЕ С ВИСОКА ПРОИЗВОДИТЕЛНОСТ ЗА FRONTEND-А
         png_path = output_path.replace(".tif", ".png")
-        stats = bake_png(output_path, png_path)
+        stats = bake_png(output_path, png_path, avg_confidence=round(single_avg_conf, 1))
         return stats
 
     print(f"🔄 Обработка на сателитна сцена от Sentinel-2 (многофайлова)...")
+    all_confidences = []  # Натрупване на увереностите от всички блокове
 
     # 1. Четене на SCL (Scene Classification Layer) и маскиране на облаци
     # Отваряме първия канал (B2), за да вземем точните размери (10m/px)
@@ -122,9 +128,10 @@ def process_scene(band_paths: dict, output_path: str, model):
     kernel = np.ones((15, 15), np.uint8) 
     dilated_cloud_mask = cv2.dilate(binary_cloud_mask, kernel, iterations=1)
 
-    # Създаване на маска за суша (класове: 4 - растителност, 5 - голи почви, 11 - сняг)
-    land_mask = np.isin(scl_full, [4, 5, 11]).astype(bool)
+    # Създаване на маска за суша (класове: 4 - растителност, 5 - голи почви, 7 - некласифициран, 11 - сняг)
+    land_mask = np.isin(scl_full, [4, 5, 7, 11]).astype(bool)
     # Крайна маска на невалидните пиксели: облаци + суша
+    # Валидни остават само пиксели, класифицирани от SCL като вода (клас 6).
     final_invalid_mask = dilated_cloud_mask.astype(bool) | land_mask
 
     print("✅ Генерирани са маските за облаци и суша.")
@@ -186,21 +193,25 @@ def process_scene(band_paths: dict, output_path: str, model):
             X_water = prepare_features(b2_water, b3_water, b4_water, b8_water)
             
             if len(X_water) > 0:
-                # Предсказване на класа. Моделът връща директно класовете: 10, 20 или 30
-                mapped_pred = model.predict_batch(X_water)
+                # Предсказване на класа и реалната увереност на модела
+                mapped_pred, conf_batch = model.predict_batch_with_confidence(X_water)
                 result_block[target_mask] = mapped_pred
+                # Натрупване на увереностите за крайната статистика
+                all_confidences.extend(conf_batch.tolist())
             
             dst.write(result_block, 1, window=window)
             print(".", end="", flush=True)
 
-    print(f"\n🎉 Картата е генерирана в {output_path}")
+    # Изчисляване на средната увереност от всички обработени пиксели
+    scene_avg_conf = sum(all_confidences) / len(all_confidences) if all_confidences else 0.0
+    print(f"\n🎉 Картата е генерирана в {output_path} (средна увереност: {scene_avg_conf:.1f}%)")
     
     # 🔥 ГЕНЕРИРАНЕ НА PNG ИЗОБРАЖЕНИЕ
     png_path = output_path.replace(".tif", ".png")
-    stats = bake_png(output_path, png_path)
+    stats = bake_png(output_path, png_path, avg_confidence=round(scene_avg_conf, 1))
     return stats
 
-def bake_png(tif_path: str, png_path: str):
+def bake_png(tif_path: str, png_path: str, avg_confidence: float = 0.0):
     """
     Конвертира 1-канален TIF с класификация в 4-канален прозрачен RGBA PNG файл.
     Този файл се използва директно от frontend-а (Leaflet картата) за супер бърза визуализация.
@@ -242,5 +253,5 @@ def bake_png(tif_path: str, png_path: str):
             "vegetation_area_m2": int(np.count_nonzero(algae_mask)) * 100,
             "sand_area_m2": int(np.count_nonzero(sand_mask)) * 100,
             "water_area_m2": int(np.count_nonzero(water_mask)) * 100,
-            "avg_confidence": 95.0 # Mocking confidence, тъй като predict_proba изисква допълнителна обработка
+            "avg_confidence": avg_confidence  # Реална средна увереност от модела
         }

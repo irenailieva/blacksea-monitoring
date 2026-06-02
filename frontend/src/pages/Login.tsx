@@ -1,7 +1,8 @@
 import { useState, FormEvent } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import useAuth from '../store/useAuth';
-import { Waves, Lock, Mail } from 'lucide-react';
+import { Lock, Mail } from 'lucide-react';
+import logoSrc from '../assets/logo.svg';
 
 // Компонент за страница "Вход в системата" (Login)
 export default function Login() {
@@ -53,8 +54,8 @@ export default function Login() {
                 <div className="p-8">
                     {/* Заглавна част с лого (иконка) */}
                     <div className="text-center mb-8">
-                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-50 mb-4 border border-blue-100">
-                            <Waves className="w-8 h-8 text-blue-600" />
+                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-4">
+                            <img src={logoSrc} alt="Black Sea Monitor" className="w-16 h-16" />
                         </div>
                         <h2 className="text-3xl font-bold text-slate-800 tracking-tight">Welcome</h2>
                         <p className="text-slate-500 mt-2">Sign in to the monitoring system</p>

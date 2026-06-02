@@ -4,6 +4,7 @@ import { useNotifications } from '@/store/useNotifications';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Archive, LayoutDashboard, Map, Menu, Bell, Users, LucideIcon } from 'lucide-react';
+import logoSrc from '../assets/logo.svg';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -54,6 +55,12 @@ export default function Layout() {
                 
                 {/* Навигация за десктоп устройства */}
                 <nav className="hidden flex-col gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6">
+                    {/* Лого и бранд */}
+                    <Link to="/" className="flex items-center gap-2 mr-2">
+                        <img src={logoSrc} alt="Black Sea Monitor" className="h-8 w-8" />
+                        <span className="font-bold text-sm tracking-tight text-foreground whitespace-nowrap">Black Sea Monitor</span>
+                    </Link>
+                    <div className="h-6 w-px bg-border" />
                     {filteredNav.map((item) => (
                         <Link
                             key={item.name}
@@ -83,6 +90,11 @@ export default function Layout() {
                     <SheetContent side="left">
                         {/* Линкове в мобилното меню */}
                         <nav className="grid gap-6 text-lg font-medium">
+                            {/* Лого в мобилното меню */}
+                            <Link to="/" className="flex items-center gap-3 mb-2">
+                                <img src={logoSrc} alt="Black Sea Monitor" className="h-10 w-10" />
+                                <span className="font-bold text-lg tracking-tight">Black Sea Monitor</span>
+                            </Link>
                             {filteredNav.map((item) => (
                                 <Link
                                     key={item.name}

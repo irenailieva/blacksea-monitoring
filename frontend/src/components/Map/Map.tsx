@@ -3,7 +3,8 @@ import { MapContainer, TileLayer, Polygon, Popup, LayersControl, useMap } from '
 import 'leaflet/dist/leaflet.css';
 import { Region } from '../../api/types';
 import L from 'leaflet';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import api from '../../api/axios';
 
 // Импортиране на базови иконки за маркерите на Leaflet, тъй като по подразбиране React понякога губи пътя до тях
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -47,6 +48,64 @@ function MapResizer() {
         };
     }, [map]);
     return null; // Този компонент не рендира нищо визуално
+}
+
+// Компонент за съдържанието на изскачащия прозорец (Popup) на регион
+// Зарежда реални статистически данни от API-то при отваряне
+function RegionPopupContent({ region }: { region: Region }) {
+    const [stats, setStats] = useState<{
+        total_vegetation_area_m2: number;
+        avg_confidence: number;
+    } | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                const res = await api.get('/analysis/stats', { params: { region_id: region.id } });
+                setStats(res.data);
+            } catch {
+                setStats(null);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchStats();
+    }, [region.id]);
+
+    return (
+        <div className="p-1 min-w-[150px]">
+            <h3 className="font-bold text-sm border-b pb-1 mb-2">{region.name}</h3>
+            <div className="space-y-1.5">
+                <div className="flex justify-between text-[10px] text-muted-foreground uppercase">
+                    <span>Type</span>
+                    <span className="font-mono">{region.type}</span>
+                </div>
+                <div className="mt-2 pt-2 border-t flex flex-col gap-1.5">
+                    {loading ? (
+                        <div className="flex items-center justify-center py-2">
+                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                        </div>
+                    ) : stats && stats.total_vegetation_area_m2 > 0 ? (
+                        <>
+                            <div className="flex justify-between text-xs">
+                                <span className="text-muted-foreground">Vegetation:</span>
+                                <span className="font-medium text-green-600">
+                                    {stats.total_vegetation_area_m2.toLocaleString()}m²
+                                </span>
+                            </div>
+                            <div className="flex justify-between text-xs">
+                                <span className="text-muted-foreground">Confidence:</span>
+                                <span className="font-medium">{stats.avg_confidence}%</span>
+                            </div>
+                        </>
+                    ) : (
+                        <p className="text-[10px] text-muted-foreground italic">No analysis data yet</p>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
 }
 
 // Главен компонент за картата
@@ -132,32 +191,9 @@ export default function AppMap({ regions, selectedSceneUrl, onAoiSubmit }: MapPr
                         // Обръщане на координатите (GeoJSON използва [lng, lat], докато Leaflet иска [lat, lng])
                         positions={region.geometry!.coordinates[0].map(coord => [coord[1], coord[0]] as [number, number])}
                     >
-                        {/* Изскачащ прозорец (Popup) при клик върху полигона */}
+                        {/* Изскачащ прозорец (Popup) с реални данни от API-то */}
                         <Popup>
-                            <div className="p-1 min-w-[150px]">
-                                <h3 className="font-bold text-sm border-b pb-1 mb-2">{region.name}</h3>
-                                <div className="space-y-1.5">
-                                    <div className="flex justify-between text-[10px] text-muted-foreground uppercase">
-                                        <span>Type</span>
-                                        <span className="font-mono">{region.type}</span>
-                                    </div>
-                                    <div className="mt-2 pt-2 border-t flex flex-col gap-1.5">
-                                        <div className="flex justify-between text-xs">
-                                            <span className="text-muted-foreground">Vegetation:</span>
-                                            {/* Hardcoded data for demonstration (TODO: connect to backend) */}
-                                            <span className="font-medium text-green-600">1,240m²</span>
-                                        </div>
-                                        <div className="flex justify-between text-xs">
-                                            <span className="text-muted-foreground">Confidence:</span>
-                                            <span className="font-medium">92%</span>
-                                        </div>
-                                        <div className="flex justify-between text-xs">
-                                            <span className="text-muted-foreground">Last scanned:</span>
-                                            <span className="font-medium">2026-04-06</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            <RegionPopupContent region={region} />
                         </Popup>
                     </Polygon>
                 ))}
