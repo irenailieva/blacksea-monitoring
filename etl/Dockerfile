@@ -18,6 +18,16 @@ COPY requirements.txt .
 RUN pip3 install --upgrade pip && \
     pip3 install --no-cache-dir -r requirements.txt
 
+# Инсталиране на ACOLITE за атмосферна корекция (Dark Spectrum Fitting)
+# ACOLITE се разпространява като git хранилище, не като pip пакет
+RUN apt-get update && apt-get install -y --no-install-recommends git && \
+    git clone https://github.com/acolite/acolite.git /opt/acolite && \
+    apt-get purge -y git && apt-get autoremove -y && \
+    rm -rf /var/lib/apt/lists/*
+
+# Добавяне на ACOLITE към Python пътищата
+ENV PYTHONPATH="${PYTHONPATH}:/opt/acolite"
+
 # Копирай ETL кода
 COPY . .
 

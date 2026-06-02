@@ -208,8 +208,15 @@ def run_pipeline(job_id=None, bbox=None, aoi_name=None, cloud_max=None, display_
 
             update_job_status(engine, job_id, 'processing', base_progress + region_progress_step * 0.6)
             
-            # 2. Предварителна обработка (preprocessing) на изображението
-            processed_file = preprocess_raster(raw_file)
+            # 2. Атмосферна корекция чрез ACOLITE (Dark Spectrum Fitting)
+            # Използва L1C (Top-of-Atmosphere) данни за прецизна акватична корекция.
+            # При липса на L1C или ACOLITE, автоматично се преминава към базова обработка.
+            l1c_file = download_result.get("l1c_composite")
+            processed_file = preprocess_raster(
+                raw_file, 
+                aoi_bbox=effective_aoi['bbox'],
+                l1c_path=l1c_file
+            )
             update_job_status(engine, job_id, 'processing', base_progress + region_progress_step * 0.63)
             
             # 3. Генериране на допълнителни индекси (напр. NDVI)

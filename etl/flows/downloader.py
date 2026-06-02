@@ -156,11 +156,72 @@ def download_data(aoi: dict, time_range: dict, output_dir: str, mode: str = "moc
                 if progress_callback:
                     progress_callback(95 + i + 1)
             
-            # Логване на успешния резултат и връщане на метаданните
-            logger.success(f"Downloaded real data for item {item.id} to {composite_filepath}")
+            # Логване на успешния резултат
+            logger.success(f"Downloaded real L2A data for item {item.id} to {composite_filepath}")
+            
+            # ── Изтегляне на L1C данни за ACOLITE атмосферна корекция ──
+            # ACOLITE изисква L1C (Top-of-Atmosphere) данни за прилагане на
+            # Dark Spectrum Fitting (DSF) корекция, която е по-прецизна от
+            # стандартната ESA Sen2Cor корекция за акватични приложения.
+            l1c_composite = None
+            l1c_bands = {}
+            
+            try:
+                logger.info("Търсене на L1C данни за ACOLITE корекция...")
+                
+                # Търсене в колекцията sentinel-2-c1-l1c (L1C Collection 1)
+                l1c_search = client.search(
+                    collections=["sentinel-2-c1-l1c"],
+                    bbox=bbox,
+                    datetime=datetime_query,
+                    max_items=5,
+                    query={"eo:cloud_cover": {"lt": cloud_max}}
+                )
+                
+                l1c_items = list(l1c_search.item_collection())
+                
+                if l1c_items:
+                    l1c_item = l1c_items[0]
+                    logger.info(f"Намерена L1C сцена: {l1c_item.id}. Изтегляне...")
+                    
+                    # Зареждане на L1C спектралните канали (TOA отражателност)
+                    l1c_ds = odc.stac.load(
+                        [l1c_item],
+                        bands=["blue", "green", "red", "nir"],
+                        bbox=bbox,
+                        crs="EPSG:4326",
+                        resolution=0.0001
+                    )
+                    
+                    if "time" in l1c_ds.dims:
+                        l1c_ds = l1c_ds.isel(time=0)
+                    
+                    # Запазване на L1C композит за ACOLITE
+                    l1c_filename = f"sentinel2_l1c_{l1c_item.id}.tif"
+                    l1c_composite = os.path.join(output_dir, l1c_filename)
+                    
+                    l1c_da = l1c_ds[["blue", "green", "red", "nir"]].to_array(dim="band")
+                    l1c_da.rio.to_raster(l1c_composite)
+                    
+                    # Запазване на отделни L1C канали
+                    l1c_band_map = {"blue": "b2", "green": "b3", "red": "b4", "nir": "b8"}
+                    for stac_name, ml_name in l1c_band_map.items():
+                        l1c_band_file = os.path.join(output_dir, f"sentinel2_l1c_{l1c_item.id}_{ml_name}.tif")
+                        l1c_ds[stac_name].rio.to_raster(l1c_band_file)
+                        l1c_bands[ml_name] = l1c_band_file
+                    
+                    logger.success(f"L1C данни изтеглени успешно: {l1c_composite}")
+                else:
+                    logger.warning("Няма налични L1C сцени за ACOLITE. Ще се използват L2A данни.")
+                    
+            except Exception as l1c_err:
+                logger.warning(f"Неуспешно изтегляне на L1C данни: {l1c_err}. ACOLITE корекцията ще бъде пропусната.")
+            
             return {
                 "composite": composite_filepath,
                 "ml_bands": ml_band_paths,
+                "l1c_composite": l1c_composite,       # Път до L1C за ACOLITE (или None)
+                "l1c_bands": l1c_bands,                # Отделни L1C канали
                 "stac_item_id": item.id,
                 "all_stac_ids": [i.id for i in items],
                 "cloud_cover": item.properties.get("eo:cloud_cover", 0.0),

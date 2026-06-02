@@ -15,6 +15,12 @@ numpy==1.26.4
 pandas==2.2.3
 polars==1.13.1
 
+# Зависимости на ACOLITE за атмосферна корекция
+netCDF4>=1.6.0
+scikit-image>=0.21.0
+h5py>=3.10.0
+pyhdf>=0.10.0
+
 shapely==2.0.4
 pyproj==3.7.1
 fiona==1.9.4

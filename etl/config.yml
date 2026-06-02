@@ -14,3 +14,15 @@ output:
   dir: "out"
   manifest_csv: "manifest.csv"
   tiles_geojson: "tiles.geojson"
+
+# Конфигурация на ACOLITE за атмосферна корекция
+# Алгоритъм: Dark Spectrum Fitting (DSF), оптимизиран за акватични приложения
+acolite:
+  enabled: true                              # Активиране/деактивиране на ACOLITE
+  dsf_aot_estimate: "fixed"                  # Метод за оценка на аерозолна дебелина
+  l2w_parameters:                            # Изходни L2W продукти
+    - "rhow_*"                               # Водно-напускаща отражателност
+  glint_correction: true                     # Корекция на слънчеви отблясъци
+  s2_target_res: 10                          # Целева резолюция (метри)
+  blacksea_limit: [41.0, 27.0, 44.0, 32.0]  # Граници на българското крайбрежие [S, W, N, E]
+
