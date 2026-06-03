@@ -168,10 +168,14 @@ export default function Dashboard() {
     }, []);
 
     // ── Производни данни (Derived Data) ──────────────────────────────────────────────────────────────
-    // Сортиране на сцените по дата на заснемане в низходящ ред (най-новите първи)
-    const sortedScenes = [...scenes].sort(
-        (a, b) => new Date(b.acquisition_date).getTime() - new Date(a.acquisition_date).getTime()
-    );
+    // Сортиране по дата на заявката (created_at) в низходящ ред, за да се гарантира,
+    // че новодобавените AOI сцени винаги се появяват най-отгоре, независимо от датата
+    // на заснемане на сателитния образ. При липса на created_at се използва acquisition_date.
+    const sortedScenes = [...scenes].sort((a, b) => {
+        const dateA = a.created_at ?? a.acquisition_date;
+        const dateB = b.created_at ?? b.acquisition_date;
+        return new Date(dateB).getTime() - new Date(dateA).getTime();
+    });
 
     // Конструиране на URL адреса за GeoTIFF файла на избраната сцена
     const selectedSceneUrl = selectedScene

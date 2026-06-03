@@ -56,11 +56,12 @@ export default function Layout() {
                 {/* Навигация за десктоп устройства */}
                 <nav className="hidden flex-col gap-6 text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6">
                     {/* Лого и бранд */}
-                    <Link to="/" className="flex items-center gap-2 mr-2">
+                    <Link to="/" className="flex items-center gap-2 mr-4">
                         <img src={logoSrc} alt="Black Sea Monitor" className="h-8 w-8" />
                         <span className="font-bold text-sm tracking-tight text-foreground whitespace-nowrap">Black Sea Monitor</span>
                     </Link>
-                    <div className="h-6 w-px bg-border" />
+                    <div className="h-5 w-px bg-border mx-2 shrink-0" />
+
                     {filteredNav.map((item) => (
                         <Link
                             key={item.name}
