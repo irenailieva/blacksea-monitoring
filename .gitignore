@@ -1,11 +1,25 @@
+# Virtual environments
 venv/
 .venv/
 env/
-env/out/
+
+# Python cache
 __pycache__/
+*.pyc
+.pytest_cache/
+
+# Node
 node_modules/
+
+# Environment variables
 .env
+
+# IDE / Editor
 .cursorrules
+.agent/
+
+# Build output
+frontend/dist/
 
 # ML Artifacts and Data
 ml/artifacts/*.pkl
@@ -15,3 +29,14 @@ ml/data/
 *.pt
 *.h5
 *.onnx
+
+# ETL output
+etl/out/*.tif
+
+# Database files
+*.db
+*.sqlite3
+
+# OS files
+.DS_Store
+Thumbs.db
