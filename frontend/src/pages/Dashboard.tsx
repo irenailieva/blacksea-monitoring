@@ -194,9 +194,9 @@ export default function Dashboard() {
     return (
         <div className="flex h-full flex-col overflow-hidden bg-muted/20">
             {/* Горен панел (Header) */}
-            <div className="flex-none px-4 py-3 m-4 mb-0 rounded-lg flex items-center justify-between border-2 border-slate-300 dark:border-slate-700 bg-background shadow-sm z-10">
-                <div className="flex items-center gap-6">
-                    <h2 className="text-3xl font-bold tracking-tight">Monitoring Map</h2>
+            <div className="flex-none px-3 py-2 m-2 mb-0 rounded-lg flex items-center justify-between border-2 border-slate-300 dark:border-slate-700 bg-background shadow-sm z-10">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl lg:text-2xl font-bold tracking-tight">Monitoring Map</h2>
                     {/* Табове за превключване между Карта и Детайлен Анализ */}
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-[400px]">
                         <TabsList className="grid w-full grid-cols-2">
@@ -212,10 +212,10 @@ export default function Dashboard() {
             </div>
 
             {/* Изглед Карта (Map View) */}
-            <div className={`flex-1 min-h-0 p-4 ${activeTab === 'map' ? 'block' : 'hidden'}`}>
-                <div className="grid h-full grid-cols-1 gap-4 lg:grid-cols-4">
+            <div className={`flex-1 min-h-0 p-2 lg:p-4 lg:pt-2 ${activeTab === 'map' ? 'block' : 'hidden'}`}>
+                <div className="grid h-full grid-cols-1 gap-2 lg:gap-4 lg:grid-cols-4">
                     {/* ── Странична лента (Sidebar) ── */}
-                    <div className="flex flex-col h-full space-y-4 lg:col-span-1 min-h-0">
+                    <div className="flex flex-col h-full space-y-2 lg:col-span-1 min-h-0">
 
                         {/* Карточка за статуса на активна фонова задача (Active job status card) */}
                         {activeJob && (
@@ -289,8 +289,8 @@ export default function Dashboard() {
 
                         {/* Списък с наличните сцени (Available scenes) */}
                         <Card className="flex-1 flex flex-col min-h-0">
-                            <CardHeader className="pb-3 shrink-0">
-                                <CardTitle className="text-lg flex items-center gap-2">
+                            <CardHeader className="p-3 pb-2 shrink-0">
+                                <CardTitle className="text-base flex items-center gap-2">
                                     <ImageIcon className="h-4 w-4" />
                                     Available Scenes ({sortedScenes.length})
                                     <Button
@@ -320,7 +320,7 @@ export default function Dashboard() {
                                             <div
                                                 key={scene.id}
                                                 onClick={() => setSelectedScene(scene)}
-                                                className={`p-3 border-b last:border-0 cursor-pointer hover:bg-muted/50 transition-colors ${
+                                                className={`p-2 border-b last:border-0 cursor-pointer hover:bg-muted/50 transition-colors ${
                                                     selectedScene?.id === scene.id
                                                         ? 'bg-primary/5 border-l-4 border-l-primary' // Стилизиране на активно избраната сцена
                                                         : ''
@@ -350,8 +350,8 @@ export default function Dashboard() {
 
                         {/* Инструкции за работа (Instructions card) */}
                         <Card className="border-dashed shrink-0">
-                            <CardContent className="p-4 space-y-2">
-                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">How it works</p>
+                            <CardContent className="p-3 space-y-1">
+                                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">How it works</p>
                                 <ol className="text-[11px] text-muted-foreground space-y-1.5 list-decimal list-inside">
                                     <li>Click <strong>"Analyze Zone"</strong> on the map</li>
                                     <li>Drag to draw your area of interest</li>
