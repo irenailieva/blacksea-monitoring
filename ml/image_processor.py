@@ -257,15 +257,15 @@ def bake_png(tif_path: str, png_path: str, avg_confidence: float = 0.0):
         sand_mask = ((data >= 0.5) & (data < 1.5)) | ((data >= 5) & (data < 15))
         rgba[sand_mask] = [250, 204, 21, 255]
         
-        # 3. Дълбока вода (Синьо #0ea5e9)
+        # 3. Дълбока вода (Синьо #1d4ed8)
         # Класът от модела е 30.
         water_mask = ((data >= 2.5) & (data < 5.0)) | ((data >= 25.5) & (data < 35))
-        rgba[water_mask] = [14, 165, 233, 255]
+        rgba[water_mask] = [29, 78, 216, 255]
 
-        # 4. Морски фитопланктон / Coccolithophores (Тюркоазено #06b6d4)
+        # 4. Морски фитопланктон / Coccolithophores (Тюркоазено #22d3ee)
         # Класът от модела е 40.
         bloom_mask = ((data >= 5.0) & (data < 6.0)) | ((data >= 35) & (data < 45))
-        rgba[bloom_mask] = [6, 182, 212, 255]
+        rgba[bloom_mask] = [34, 211, 238, 255]
 
         # Конвертиране на масива в PNG и запазване
         img = Image.fromarray(rgba, 'RGBA')
