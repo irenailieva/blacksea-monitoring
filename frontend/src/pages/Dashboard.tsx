@@ -168,10 +168,26 @@ export default function Dashboard() {
     }, []);
 
     // ── Производни данни (Derived Data) ──────────────────────────────────────────────────────────────
+    // Филтриране на сцени, които все още се обработват
+    const filteredScenes = scenes.filter(scene => {
+        // Проверяваме дали има активна задача, която не е завършила
+        if (activeJob && (activeJob.status === 'pending' || activeJob.status === 'processing')) {
+            // За ръчно качени сцени, които имат scene_id_str
+            if (activeJob.scene_id_str && scene.scene_id === activeJob.scene_id_str) {
+                return false;
+            }
+            // За сцени от анализ на зона (AOI analysis), където ID-то на задачата е част от scene_id
+            if (scene.scene_id.includes(`_job${activeJob.job_id}_`)) {
+                return false;
+            }
+        }
+        return true;
+    });
+
     // Сортиране по дата на заявката (created_at) в низходящ ред, за да се гарантира,
     // че новодобавените AOI сцени винаги се появяват най-отгоре, независимо от датата
     // на заснемане на сателитния образ. При липса на created_at се използва acquisition_date.
-    const sortedScenes = [...scenes].sort((a, b) => {
+    const sortedScenes = [...filteredScenes].sort((a, b) => {
         const dateA = a.created_at ?? a.acquisition_date;
         const dateB = b.created_at ?? b.acquisition_date;
         return new Date(dateB).getTime() - new Date(dateA).getTime();
