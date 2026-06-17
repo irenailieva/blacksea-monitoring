@@ -39,7 +39,8 @@ def calculate_ndwi(green: np.ndarray, nir: np.ndarray) -> np.ndarray:
     denominator = green + nir
     return np.where(denominator != 0, (green - nir) / denominator, 0.0)
 
-def prepare_features(blue: np.ndarray, green: np.ndarray, red: np.ndarray, nir: np.ndarray) -> np.ndarray:
+def prepare_features(blue: np.ndarray, green: np.ndarray, red: np.ndarray, nir: np.ndarray, 
+                     is_stac_scaled: bool = None, has_baseline_offset: bool = None) -> np.ndarray:
     """
     Подготвя финалната матрица с характеристики (features), комбинирайки 
     основните спектрални канали и изчислените индекси.
@@ -51,23 +52,29 @@ def prepare_features(blue: np.ndarray, green: np.ndarray, red: np.ndarray, nir: 
         green: Стойности от зеления канал (B3)
         red: Стойности от червения канал (B4)
         nir: Стойности от близкия инфрачервен канал (B8)
+        is_stac_scaled: Указва дали данните са мащабирани до 0-1 (ако None, се отгатва)
+        has_baseline_offset: Указва дали данните имат +1000 offset (ако None, се отгатва)
     
     Връща:
         Двумерна матрица с форма (брой_примери, 6)
     """
-    data_max = np.nanmax(blue)
-    valid_blue = blue[blue > 0]
-    # Use median instead of min because min can be pulled down by overcorrected dark pixels
-    data_median = np.nanmedian(valid_blue) if len(valid_blue) > 0 else 0
+    if is_stac_scaled is None or has_baseline_offset is None:
+        data_max = np.nanmax(blue)
+        valid_blue = blue[blue > 0]
+        # Use median instead of min because min can be pulled down by overcorrected dark pixels
+        data_median = np.nanmedian(valid_blue) if len(valid_blue) > 0 else 0
+        
+        is_stac_scaled = (data_max <= 2.0)
+        has_baseline_offset = (data_median >= 800)
 
-    if data_max <= 2.0:
+    if is_stac_scaled:
         # odc.stac Sentinel-2 L2A data with auto-applied offset: reflectance = (DN - 1000) / 10000
         scale_factor = 10000.0
         b2_scaled = np.clip(blue * scale_factor, 0, None)
         b3_scaled = np.clip(green * scale_factor, 0, None)
         b4_scaled = np.clip(red * scale_factor, 0, None)
         b8_scaled = np.clip(nir * scale_factor, 0, None)
-    elif data_median >= 800:
+    elif has_baseline_offset:
         # Raw JP2 data. Contains ESA Baseline 4.0+ offset (+1000). We must subtract it.
         # Check median >= 800 because water reflectance is typically ~100-300, plus 1000 = 1100-1300.
         b2_scaled = np.clip(blue - 1000.0, 0, None)

@@ -168,6 +168,16 @@ def process_scene(band_paths: dict, output_path: str, model):
     # 3. Обработка на изображението на блокове (Block-by-Block Processing)
     print(f"🌍 Генериране на картата...")
     
+    with rasterio.open(b2_path) as src_b2:
+        # Определяне на глобални параметри за мащабиране
+        sample_b2 = src_b2.read(1, out_shape=(1, src_b2.height // 10, src_b2.width // 10))
+        valid_sample = sample_b2[sample_b2 > 0]
+        data_max = np.nanmax(valid_sample) if len(valid_sample) > 0 else 0
+        data_median = np.nanmedian(valid_sample) if len(valid_sample) > 0 else 0
+        global_is_stac_scaled = bool(data_max <= 2.0)
+        global_has_offset = bool(data_median >= 800)
+        print(f"   [Инфо] Използва се глобален мащаб: STAC={global_is_stac_scaled}, Offset={global_has_offset}")
+
     with rasterio.open(b2_path) as src_b2, \
          rasterio.open(b3_path) as src_b3, \
          rasterio.open(b4_path) as src_b4, \
@@ -210,7 +220,11 @@ def process_scene(band_paths: dict, output_path: str, model):
             b8_water = b8[target_mask]
             
             # Подготовка на характеристиките [B2, B3, B4, B8, NDVI, NDWI]
-            X_water = prepare_features(b2_water, b3_water, b4_water, b8_water)
+            X_water = prepare_features(
+                b2_water, b3_water, b4_water, b8_water,
+                is_stac_scaled=global_is_stac_scaled,
+                has_baseline_offset=global_has_offset
+            )
             
             if len(X_water) > 0:
                 # Предсказване на класа и реалната увереност на модела
