@@ -229,6 +229,12 @@ def process_scene(band_paths: dict, output_path: str, model):
             if len(X_water) > 0:
                 # Предсказване на класа и реалната увереност на модела
                 mapped_pred, conf_batch = model.predict_batch_with_confidence(X_water)
+                
+                # Поправка: Пиксели с изключително ниско отражение (< 0.5% в синьо и зелено) са гарантирано 
+                # дълбока вода. Това предотвратява артефакти от атмосферна корекция (отрицателни стойности).
+                dark_pixels_mask = (X_water[:, 0] < 50) & (X_water[:, 1] < 50)
+                mapped_pred[dark_pixels_mask] = 30
+                
                 result_block[target_mask] = mapped_pred
                 # Натрупване на увереностите за крайната статистика
                 all_confidences.extend(conf_batch.tolist())
