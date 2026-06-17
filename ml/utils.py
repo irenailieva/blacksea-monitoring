@@ -55,34 +55,31 @@ def prepare_features(blue: np.ndarray, green: np.ndarray, red: np.ndarray, nir: 
     Връща:
         Двумерна матрица с форма (брой_примери, 6)
     """
-    # 🌡️ Автоматична калибрация на входа (Auto-Intake Calibration)
-    # ML моделите са обучени върху „сурови" стойности (Raw DN) в диапазон 0-10000.
-    #
-    # odc.stac зарежда Sentinel-2 L2A данни (ESA Processing Baseline 4.0+) с автоматично
-    # приложен BOA offset: reflectance = DN * 0.0001 + (-0.1)
-    # Тоест тъмните пиксели (вода, сенки) с DN~700 получават: 700*0.0001 - 0.1 = -0.03
-    # (отрицателна стойност!), а след умножение по 10000 стават -300 — напълно извън
-    # разпределението, на което е учен моделът.
-    #
-    # Решение: ако данните изглеждат скалирани (max <= 2.0), те са BOA reflectance.
-    # Добавяме обратно BOA_ADD_OFFSET (+0.1) преди умножението, за да се върнат
-    # в диапазона на DN стойностите, очаквани от модела.
-    BOA_ADD_OFFSET = 0.1   # ESA Sentinel-2 L2A Processing Baseline 4.0+ offset (-0.1 applied by odc.stac)
     data_max = np.nanmax(blue)
+    valid_blue = blue[blue > 0]
+    # Use median instead of min because min can be pulled down by overcorrected dark pixels
+    data_median = np.nanmedian(valid_blue) if len(valid_blue) > 0 else 0
 
     if data_max <= 2.0:
-        # Данните са BOA reflectance с вграден offset — обръщаме го и скалираме до DN
+        # odc.stac Sentinel-2 L2A data with auto-applied offset: reflectance = (DN - 1000) / 10000
         scale_factor = 10000.0
-        b2_scaled = (blue  + BOA_ADD_OFFSET) * scale_factor
-        b3_scaled = (green + BOA_ADD_OFFSET) * scale_factor
-        b4_scaled = (red   + BOA_ADD_OFFSET) * scale_factor
-        b8_scaled = (nir   + BOA_ADD_OFFSET) * scale_factor
+        b2_scaled = np.clip(blue * scale_factor, 0, None)
+        b3_scaled = np.clip(green * scale_factor, 0, None)
+        b4_scaled = np.clip(red * scale_factor, 0, None)
+        b8_scaled = np.clip(nir * scale_factor, 0, None)
+    elif data_median >= 800:
+        # Raw JP2 data. Contains ESA Baseline 4.0+ offset (+1000). We must subtract it.
+        # Check median >= 800 because water reflectance is typically ~100-300, plus 1000 = 1100-1300.
+        b2_scaled = np.clip(blue - 1000.0, 0, None)
+        b3_scaled = np.clip(green - 1000.0, 0, None)
+        b4_scaled = np.clip(red - 1000.0, 0, None)
+        b8_scaled = np.clip(nir - 1000.0, 0, None)
     else:
-        # Данните вече са в DN диапазон (0-10000) — използваме директно
-        b2_scaled = blue
-        b3_scaled = green
-        b4_scaled = red
-        b8_scaled = nir
+        # Data is 0-10000 but does NOT have the offset (e.g. from Planetary Computer)
+        b2_scaled = blue.copy()
+        b3_scaled = green.copy()
+        b4_scaled = red.copy()
+        b8_scaled = nir.copy()
 
     # Изчисляване на индексите върху вече калибрираните данни
     ndvi = calculate_ndvi(b8_scaled, b4_scaled)

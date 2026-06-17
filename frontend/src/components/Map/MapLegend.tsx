@@ -2,6 +2,7 @@ const legendItems = [
     { label: 'Algae / Vegetation', color: '#22c55e', description: 'Submerged organic matter' },
     { label: 'Sand / Shallows', color: '#facc15', description: 'Sediments and shallow zones' },
     { label: 'Open Water', color: '#0ea5e9', description: 'Deep or clear water' },
+    { label: 'Marine Phytoplankton', color: '#06b6d4', description: 'Natural sea blooms (e.g., E. huxleyi)' },
 ];
 
 // Компонент, визуализиращ легенда върху картата

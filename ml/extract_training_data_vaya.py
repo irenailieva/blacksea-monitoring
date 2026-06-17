@@ -16,8 +16,8 @@ import time
 
 # -- КОНФИГУРАЦИЯ НА ПЪТИЩАТА --
 # Директория с данните от Sentinel-2 за езерото Вая
-BASE_DIR = Path("/app/data/inference/lake-vaya")
-OUTPUT_CSV = Path("/app/dataset.csv")
+BASE_DIR = Path(r"C:\Users\irena\Downloads\vaya_lake_tiffs")
+OUTPUT_CSV = Path(__file__).parent / "dataset.csv"
 
 # Пътища до отделните спектрални канали (Bands)
 B2_PATH = BASE_DIR / "T35TNH_20230606T085559_B02_10m.jp2"  # Син канал
@@ -78,18 +78,16 @@ def extract_data():
         )
         print(f"[{time.time()-start_time:.1f}s] SCL прочетен. Размери: {scl_raw.shape}")
 
-    # 3. Изчисляване на спектрални индекси
-    print(f"[{time.time()-start_time:.1f}s] Изчисляване на индекси...")
-    # Игнориране на предупреждения за деление на нула
-    np.seterr(divide='ignore', invalid='ignore')
-    
-    # NDVI (Нормализиран диференциален вегетационен индекс)
-    denom_ndvi = b8 + b4
-    ndvi = np.where(denom_ndvi != 0, (b8 - b4) / denom_ndvi, -1.0)
-    
-    # NDWI (Нормализиран диференциален воден индекс)
-    denom_ndwi = b3 + b8
-    ndwi = np.where(denom_ndwi != 0, (b3 - b8) / denom_ndwi, -1.0)
+    import utils
+    # Extract features using centralized utility (which properly corrects BOA offset)
+    # We must flatten the 2D arrays because prepare_features uses np.column_stack which expects 1D arrays.
+    features = utils.prepare_features(b2.flatten(), b3.flatten(), b4.flatten(), b8.flatten())
+    b2_calib = features[:, 0].reshape(b2.shape)
+    b3_calib = features[:, 1].reshape(b3.shape)
+    b4_calib = features[:, 2].reshape(b4.shape)
+    b8_calib = features[:, 3].reshape(b8.shape)
+    ndvi = features[:, 4].reshape(b2.shape)
+    ndwi = features[:, 5].reshape(b2.shape)
     
     # 4. Прилагане на правилата за автоматично маркиране (Force-Learning)
     print(" Прилагане на правилата за създаване на етикети (Labels)...")
@@ -136,10 +134,10 @@ def extract_data():
         for y, x in zip(selected_y, selected_x):
             new_samples.append({
                 'class_id': c,
-                'band_1': int(b2[y, x]),
-                'band_2': int(b3[y, x]),
-                'band_3': int(b4[y, x]),
-                'band_4': int(b8[y, x]),
+                'band_1': int(b2_calib[y, x]),
+                'band_2': int(b3_calib[y, x]),
+                'band_3': int(b4_calib[y, x]),
+                'band_4': int(b8_calib[y, x]),
                 'ndvi': round(float(ndvi[y, x]), 4),
                 'ndwi': round(float(ndwi[y, x]), 4)
             })

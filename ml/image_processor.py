@@ -55,22 +55,38 @@ def process_scene(band_paths: dict, output_path: str, model):
             with rasterio.open(output_path, 'w', **profile) as dst:
                 # Четем изображението блок по блок, за да не препълним RAM паметта (block_windows)
                 for ji, window in src.block_windows(1):
-                    # Картографиране на каналите:
-                    # В стандартен RGB образ: Канал 1 -> Червено (b4), Канал 2 -> Зелено (b3), Канал 3 -> Синьо (b2)
-                    b4 = src.read(1, window=window).astype('float32')
-                    b3 = src.read(2, window=window).astype('float32') if src.count >= 2 else b4
-                    b2 = src.read(3, window=window).astype('float32') if src.count >= 3 else b3
-                    
-                    if has_nir:
+                    # Картографиране на каналите според броя налични слоеве:
+                    if src.count == 5:
+                        # Sentinel-2 Composite: 1=Blue, 2=Green, 3=Red, 4=NIR, 5=SCL
+                        b2 = src.read(1, window=window).astype('float32')
+                        b3 = src.read(2, window=window).astype('float32')
+                        b4 = src.read(3, window=window).astype('float32')
                         b8 = src.read(4, window=window).astype('float32')
+                        scl_single = src.read(5, window=window)
                     else:
-                        # Ако липсва NIR (снимката е само RGB), използваме зеления канал като заместител (synthetic NIR).
-                        # Това помага на изчислението на NDVI естествено да изолира растителността.
-                        b8 = b3
+                        # В стандартен RGB образ: Канал 1 -> Червено (b4), Канал 2 -> Зелено (b3), Канал 3 -> Синьо (b2)
+                        b4 = src.read(1, window=window).astype('float32')
+                        b3 = src.read(2, window=window).astype('float32') if src.count >= 2 else b4
+                        b2 = src.read(3, window=window).astype('float32') if src.count >= 3 else b3
+                        
+                        if has_nir:
+                            b8 = src.read(4, window=window).astype('float32')
+                        else:
+                            # Ако липсва NIR (снимката е само RGB), използваме зеления канал като заместител.
+                            b8 = b3
+                        scl_single = None
 
-                    # Тъй като това е обикновена снимка (нямаме сателитна SCL маска),
-                    # приемаме всички пиксели за валидни (target_mask).
-                    target_mask = np.ones(b2.shape, dtype=bool) 
+                    if scl_single is not None:
+                        # Ако имаме SCL маска (Sentinel-2 Composite), използваме я за филтриране
+                        water_mask = (scl_single == 6)
+                        binary_cloud_mask = np.isin(scl_single, [3, 8, 9, 10]).astype(np.uint8)
+                        kernel = np.ones((15, 15), np.uint8)
+                        dilated_cloud_mask = cv2.dilate(binary_cloud_mask, kernel, iterations=1)
+                        target_mask = water_mask & ~dilated_cloud_mask.astype(bool)
+                    else:
+                        # Тъй като това е обикновена снимка (нямаме сателитна SCL маска),
+                        # приемаме всички пиксели за валидни (target_mask).
+                        target_mask = np.ones(b2.shape, dtype=bool)
                     # Създаваме празен блок за резултата, запълнен със стойност 255 (NoData)
                     result_block = np.full(b2.shape, 255, dtype=np.uint8)
                     
@@ -243,8 +259,13 @@ def bake_png(tif_path: str, png_path: str, avg_confidence: float = 0.0):
         
         # 3. Дълбока вода (Синьо #0ea5e9)
         # Класът от модела е 30.
-        water_mask = ((data >= 2.5) & (data < 5.0)) | ((data >= 25.5) & (data < 45))
+        water_mask = ((data >= 2.5) & (data < 5.0)) | ((data >= 25.5) & (data < 35))
         rgba[water_mask] = [14, 165, 233, 255]
+
+        # 4. Морски фитопланктон / Coccolithophores (Тюркоазено #06b6d4)
+        # Класът от модела е 40.
+        bloom_mask = ((data >= 5.0) & (data < 6.0)) | ((data >= 35) & (data < 45))
+        rgba[bloom_mask] = [6, 182, 212, 255]
 
         # Конвертиране на масива в PNG и запазване
         img = Image.fromarray(rgba, 'RGBA')
@@ -254,8 +275,9 @@ def bake_png(tif_path: str, png_path: str, avg_confidence: float = 0.0):
         # Изчисляване на статистики за frontend-а.
         # Тъй като разделителната способност на Sentinel-2 е 10m/px, един пиксел се равнява на 10x10 = 100 m²
         return {
-            "vegetation_area_m2": int(np.count_nonzero(algae_mask)) * 100,
-            "sand_area_m2": int(np.count_nonzero(sand_mask)) * 100,
-            "water_area_m2": int(np.count_nonzero(water_mask)) * 100,
+            "vegetation_area_m2": int(np.count_nonzero(algae_mask) * 100),
+            "sand_area_m2": int(np.count_nonzero(sand_mask) * 100),
+            "water_area_m2": int(np.count_nonzero(water_mask) * 100),
+            "bloom_area_m2": int(np.count_nonzero(bloom_mask) * 100),
             "avg_confidence": avg_confidence  # Реална средна увереност от модела
         }
