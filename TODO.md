@@ -9,6 +9,9 @@
 - [ ] Map Page: Auto ETL job resulting in questionable classification overlay (large area of blue pixels over land)
 - [x] Data page: Data screen container must fit into standard 16:10 and 16:9 desktop viewports (currently slightly taller).
 - [x] Analysis page: SHAP contribution diagram must display index values as integer percentages instead of floating-point numbers.
+- [ ] New 4th class: Marine Blooms (add to coursework)
+- [ ] BOA correction added to preprocessing algorithm /prior to model training!/ (add to coursework)
+
 
 
 ## Final Tasks Before Completion

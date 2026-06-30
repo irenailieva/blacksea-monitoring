@@ -95,6 +95,27 @@ async def trigger_ml_inference(job_id: int, scene_id_int: int, file_path: str):
                     "finished_at": datetime.utcnow()
                 }
             )
+            
+        # Обновяване на scene_files с новия път, за да може frontend-а да го зареди
+        from app.models.scene_file import SceneFile
+        frontend_path = f"/data/inference/{scene_id_str}_classification.tif"
+        
+        existing_file = db.query(SceneFile).filter(
+            SceneFile.scene_id == scene_id,
+            SceneFile.file_type == "CLASSIFICATION"
+        ).first()
+        
+        if existing_file:
+            existing_file.path = frontend_path
+        else:
+            new_file = SceneFile(
+                scene_id=scene_id,
+                file_type="CLASSIFICATION",
+                path=frontend_path
+            )
+            db.add(new_file)
+            
+        db.commit()
     except Exception as e:
         # 6. В случай на възникнала грешка в който и да е етап, отбелязваме задачата като "failed"
         print(f"Failed to trigger ML processing: {e}")
